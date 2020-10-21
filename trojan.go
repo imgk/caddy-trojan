@@ -287,6 +287,12 @@ func relay2(c, rc DuplexConn, ch chan data) {
 }
 
 func Copy(w io.Writer, r io.Reader) (n int64, err error) {
+	if c, ok := w.(duplexConn); ok {
+		w = c.Conn
+	}
+	if c, ok := r.(duplexConn); ok {
+		r = c.Conn
+	}
 	if wt, ok := r.(io.WriterTo); ok {
 		return wt.WriteTo(w)
 	}
@@ -297,6 +303,8 @@ func Copy(w io.Writer, r io.Reader) (n int64, err error) {
 	}
 
 	b := byteBuffer.Get().([]byte)
+	defer byteBuffer.Put(b)
+
 	for {
 		nr, er := r.Read(b)
 		if nr > 0 {
@@ -319,7 +327,6 @@ func Copy(w io.Writer, r io.Reader) (n int64, err error) {
 			break
 		}
 	}
-	byteBuffer.Put(b)
 	return n, err
 }
 
