@@ -1,6 +1,7 @@
 package trojan
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -76,7 +77,7 @@ func HandleConn(conn net.Conn, usr *User) (err error) {
 			err = fmt.Errorf("handle udp error: %w", er)
 		}
 	case cmdSmux, cmdSmux2:
-		er := HandleMux(conn, usr, b[0])
+		er := HandleMux(conn, usr, b[0]>>4 - 6)
 		if er != nil {
 			err = fmt.Errorf("handle mux error: %w", er)
 		}
@@ -88,7 +89,7 @@ func HandleConn(conn net.Conn, usr *User) (err error) {
 
 func HandleMux(conn net.Conn, usr *User, ver byte) (err error) {
 	sess, er := smux.Server(conn, &smux.Config{
-		Version:           int(ver>>4) - 6,
+		Version:           int(ver),
 		KeepAliveInterval: 10 * time.Second,
 		KeepAliveTimeout:  30 * time.Second,
 		MaxFrameSize:      32768,
@@ -101,7 +102,7 @@ func HandleMux(conn net.Conn, usr *User, ver byte) (err error) {
 	}
 	defer sess.Close()
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	for {
 		stream, er := sess.AcceptStream()
 		if er != nil {
@@ -113,7 +114,7 @@ func HandleMux(conn net.Conn, usr *User, ver byte) (err error) {
 		}
 
 		wg.Add(1)
-		go HandleStream(stream, usr, &wg)
+		go HandleStream(stream, usr, wg)
 	}
 
 	wg.Wait()
@@ -339,13 +340,15 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 	}
 
 	ch := make(chan data, 1)
-	go Copy2(conn, rc, time.Minute*5, ch)
+	go copyWithChannel(conn, rc, time.Minute*5, ch)
 
-	before := ""
-	udpAddr := (*net.UDPAddr)(nil)
+	current := make([]byte, MaxAddrLen)
+	netAddr := (*net.UDPAddr)(nil)
+
+	b := byteBuffer.Get().([]byte)
+	defer byteBuffer.Put(b)
 
 	n := int64(0)
-	b := byteBuffer.Get().([]byte)
 	for {
 		raddr, er := ReadAddrBuffer(conn, b)
 		if er != nil {
@@ -360,19 +363,20 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 			err = fmt.Errorf("read addr error: %w", er)
 			break
 		}
-		if str := string(raddr[:]); before != str {
+
+		naddr := len(raddr)
+
+		if !bytes.Equal(current, []byte(raddr)) {
 			tt, er := ResolveUDPAddr(raddr)
 			if er != nil {
 				err = fmt.Errorf("resolve target error: %w", er)
 				break
 			}
-			before = str
-			udpAddr = tt
+			current = append(current[:0], raddr...)
+			netAddr = tt
 		}
 
-		nr := len(raddr)
-
-		if _, er := io.ReadFull(conn, b[nr:nr+4]); er != nil {
+		if _, er := io.ReadFull(conn, b[naddr:naddr+4]); er != nil {
 			if ne := net.Error(nil); errors.As(er, &ne) {
 				if ne.Timeout() {
 					break
@@ -385,10 +389,10 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 			break
 		}
 
-		nr += (int(b[nr])<<8 | int(b[nr+1])) + 4
-		n += int64(nr)
+		naddr += (int(b[naddr])<<8 | int(b[naddr+1])) + 4
+		n += int64(naddr)
 
-		buf := b[len(raddr)+4:nr]
+		buf := b[len(raddr)+4:naddr]
 		if _, er := io.ReadFull(conn, buf); er != nil {
 			if ne := net.Error(nil); errors.As(er, &ne) {
 				if ne.Timeout() {
@@ -403,7 +407,7 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 		}
 
 		rc.SetWriteDeadline(time.Now().Add(time.Minute * 5))
-		if _, er := rc.WriteTo(buf, udpAddr); er != nil {
+		if _, er := rc.WriteTo(buf, netAddr); er != nil {
 			if ne := net.Error(nil); errors.As(er, &ne) {
 				if ne.Timeout() {
 					break
@@ -416,7 +420,6 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 			break
 		}
 	}
-	byteBuffer.Put(b)
 
 	rc.SetReadDeadline(time.Now())
 	d := <-ch
@@ -428,12 +431,14 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 	return n, d.num, err
 }
 
-func Copy2(conn net.Conn, rc net.PacketConn, timeout time.Duration, ch chan data) {
+func copyWithChannel(conn net.Conn, rc net.PacketConn, timeout time.Duration, ch chan data) {
 	defer rc.Close()
 
 	d := data{num: 0, err: nil}
 
 	b := byteBuffer.Get().([]byte)
+	defer byteBuffer.Put(b)
+
 	b[MaxAddrLen+2] = 0x0d
 	b[MaxAddrLen+3] = 0x0a
 	for {
@@ -455,7 +460,7 @@ func Copy2(conn net.Conn, rc net.PacketConn, timeout time.Duration, ch chan data
 		b[MaxAddrLen] = byte(n >> 8)
 		b[MaxAddrLen+1] = byte(n)
 
-		na := func(bb []byte, addr *net.UDPAddr) int64 {
+		naddr := func(bb []byte, addr *net.UDPAddr) int64 {
 			if ipv4 := addr.IP.To4(); ipv4 != nil {
 				const offset = MaxAddrLen - (1 + net.IPv4len + 2)
 				bb[offset] = AddrTypeIPv4
@@ -470,9 +475,9 @@ func Copy2(conn net.Conn, rc net.PacketConn, timeout time.Duration, ch chan data
 				return 1 + net.IPv6len + 2
 			}
 		}(b[:MaxAddrLen], src.(*net.UDPAddr))
-		d.num += 4 + int64(n) + na
+		d.num += 4 + int64(n) + naddr
 
-		if _, err := conn.Write(b[MaxAddrLen-na : MaxAddrLen+4+n]); err != nil {
+		if _, err := conn.Write(b[MaxAddrLen-naddr : MaxAddrLen+4+n]); err != nil {
 			if ne := net.Error(nil); errors.As(err, &ne) {
 				if ne.Timeout() {
 					break
@@ -482,7 +487,6 @@ func Copy2(conn net.Conn, rc net.PacketConn, timeout time.Duration, ch chan data
 			break
 		}
 	}
-	byteBuffer.Put(b)
 
 	ch <- d
 	return
