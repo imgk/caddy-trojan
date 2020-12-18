@@ -22,6 +22,7 @@ func init() {
 // and aead cipher defined by go-shadowsocks2, and return a normal page if
 // failed.
 type Wrapper struct {
+	App    trojan.App `json:"trojan"`
 	logger *zap.Logger
 }
 
@@ -36,12 +37,13 @@ func (Wrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Wrapper) Provision(ctx caddy.Context) (err error) {
 	m.logger = ctx.Logger(m)
+	err = m.App.Provision(m.logger)
 	return
 }
 
 // WrapListener implements caddy.ListenWrapper
 func (m *Wrapper) WrapListener(l net.Listener) net.Listener {
-	ln := newListener(l, m.logger)
+	ln := newListener(l, &m.App, m.logger)
 	go ln.handleConn()
 	return ln
 }
@@ -62,15 +64,17 @@ type Conn struct {
 type listener struct {
 	sync.Mutex
 	net.Listener
+	*trojan.App
 	logger *zap.Logger
 	closed bool
 	conns  chan Conn
 }
 
-func newListener(ln net.Listener, logger *zap.Logger) *listener {
+func newListener(ln net.Listener, app *trojan.App, logger *zap.Logger) *listener {
 	return &listener{
 		Mutex:    sync.Mutex{},
 		Listener: ln,
+		App:      app,
 		logger:   logger,
 		closed:   false,
 		conns:    make(chan Conn, 10),
@@ -132,7 +136,7 @@ func (l *listener) Handle(conn net.Conn) (err error) {
 	}
 
 	conn = trojan.NewWrappedConn(conn)
-	usr, err := trojan.CheckConn(conn)
+	usr, err := l.App.CheckConn(conn)
 	if err != nil {
 		if !errors.Is(err, trojan.ErrNotTrojan) {
 			l.logger.Error("handle wrapped conn", zap.Error(err))

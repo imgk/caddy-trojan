@@ -14,16 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var app = (*App)(nil)
-
 var ErrNotTrojan = errors.New("not a trojan connection")
-
-func CheckConn(conn net.Conn) (User, error) {
-	if wc, ok := conn.(*WrappedConn); ok {
-		return app.CheckWrappedConn(wc)
-	}
-	return app.CheckConn(conn)
-}
 
 type User struct {
 	Name   string

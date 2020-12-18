@@ -77,7 +77,7 @@ func HandleConn(conn net.Conn, usr *User) (err error) {
 			err = fmt.Errorf("handle udp error: %w", er)
 		}
 	case cmdSmux, cmdSmux2:
-		er := HandleMux(conn, usr, b[0]>>4 - 6)
+		er := HandleMux(conn, usr, b[0]>>4-6)
 		if er != nil {
 			err = fmt.Errorf("handle mux error: %w", er)
 		}
@@ -392,7 +392,7 @@ func HandleUDP(conn net.Conn) (int64, int64, error) {
 		naddr += (int(b[naddr])<<8 | int(b[naddr+1])) + 4
 		n += int64(naddr)
 
-		buf := b[len(raddr)+4:naddr]
+		buf := b[len(raddr)+4 : naddr]
 		if _, er := io.ReadFull(conn, buf); er != nil {
 			if ne := net.Error(nil); errors.As(er, &ne) {
 				if ne.Timeout() {

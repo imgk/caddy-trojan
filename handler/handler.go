@@ -22,6 +22,7 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
+	App   trojan.App `json:"trojan"`
 	Users []struct {
 		Path     string `json:"path"`
 		Method   string `json:"method"`
@@ -58,6 +59,7 @@ func (m *Handler) Provision(ctx caddy.Context) (err error) {
 			New: newBuffer,
 		},
 	}
+	err = m.App.Provision(m.logger)
 	return
 }
 
@@ -87,7 +89,7 @@ func newBuffer() interface{} {
 }
 
 func (m *Handler) ServeProxy(conn net.Conn) error {
-	usr, err := trojan.CheckConn(conn)
+	usr, err := m.App.CheckConn(conn)
 	if err != nil {
 		defer conn.Close()
 		if errors.Is(err, trojan.ErrNotTrojan) {
