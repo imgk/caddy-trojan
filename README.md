@@ -25,6 +25,7 @@ $ xcaddy build \
                             }
                         }
                     }],
+                    "allow_h2c": false,
                     "routes": [
                         {
                             "handle": [
