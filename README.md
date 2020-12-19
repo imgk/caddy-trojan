@@ -14,7 +14,7 @@ $ xcaddy build \
         "http": {
             "servers": {
                 "": {
-                    "listener_wrapper": [{
+                    "listener_wrappers": [{
                         "wrapper": "trojan",
                         "trojan": {
                             "users": ["user-1", "user-2"],
