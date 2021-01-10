@@ -13,7 +13,7 @@ import (
 	"github.com/shadowsocks/go-shadowsocks2/core"
 	"go.uber.org/zap"
 
-	"github.com/imgk/caddy-trojan"
+	"github.com/imgk/caddy-trojan-go"
 )
 
 func init() {

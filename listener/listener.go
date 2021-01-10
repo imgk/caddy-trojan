@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/imgk/caddy-trojan"
+	"github.com/imgk/caddy-trojan-go"
 )
 
 func init() {

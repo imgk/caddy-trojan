@@ -3,8 +3,8 @@
 ## Build with xcaddy
 ```
 $ xcaddy build \
-    --with github.com/imgk/caddy-trojan/handler \
-    --with github.com/imgk/caddy-trojan/listerner
+    --with github.com/imgk/caddy-trojan-go/handler \
+    --with github.com/imgk/caddy-trojan-go/listerner
 ```
 
 ## Config
@@ -25,7 +25,7 @@ $ xcaddy build \
                             }
                         }
                     }],
-                    "allow_h2c": false,
+                    "allow_h2c": true,
                     "routes": [
                         {
                             "handle": [
