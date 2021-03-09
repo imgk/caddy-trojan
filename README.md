@@ -3,8 +3,8 @@
 ## Build with xcaddy
 ```
 $ xcaddy build \
-    --with github.com/imgk/caddy-trojan-go/handler \
-    --with github.com/imgk/caddy-trojan-go/listerner
+    --with github.com/imgk/caddy-trojan/handler \
+    --with github.com/imgk/caddy-trojan/listerner
 ```
 
 ## Config

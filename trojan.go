@@ -3,551 +3,313 @@ package trojan
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
-	"sync"
+	"reflect"
 	"time"
-
-	"github.com/gorilla/websocket"
-	"github.com/xtaci/smux"
-	"go.uber.org/zap"
+	"unsafe"
 )
 
-const (
-	HexLen        = 56
-	MaxBufferSize = 1024 * 32
-
-	cmdConnect   = 1
-	cmdAssocaite = 3
-	cmdSmux      = 0x7f
-	cmdSmux2     = 0x8f
-)
-
-var byteBuffer = sync.Pool{New: newBuffer}
-
-func newBuffer() interface{} {
-	return make([]byte, MaxBufferSize)
+// ByteSliceToString is ...
+func ByteSliceToString(b []byte) string {
+	ptr := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	hdr := &reflect.StringHeader{
+		Data: ptr.Data,
+		Len:  ptr.Len,
+	}
+	return *(*string)(unsafe.Pointer(hdr))
 }
 
+// Upstream is ...
+type Upstream interface {
+	Validate(string) bool
+	Consume(int64, int64)
+}
+
+// NewUpstream is ...
+func NewUpstream(ss []string, s string) (Upstream, error) {
+	if s == "" {
+		u := &LocalUpstream{Users: make(map[string]struct{})}
+		b := [HeaderLen]byte{}
+		for _, v := range ss {
+			GenKey(v, b[:])
+			u.Users[string(b[:])] = struct{}{}
+			u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+		}
+		return u, nil
+	}
+	u := &RemoteUpstream{Users: make(map[string]struct{})}
+	b := [HeaderLen]byte{}
+	for _, v := range ss {
+		GenKey(v, b[:])
+		u.Users[string(b[:])] = struct{}{}
+		u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+	}
+	return u, nil
+}
+
+// LocalUpstream is ...
+type LocalUpstream struct {
+	// Users is ...
+	Users map[string]struct{}
+}
+
+// Validate is ...
+func (u *LocalUpstream) Validate(s string) bool {
+	_, ok := u.Users[s]
+	return ok
+}
+
+// Consume is ...
+func (u *LocalUpstream) Consume(n1, n2 int64) {}
+
+// RemoteUpstream is ...
+type RemoteUpstream struct {
+	// Client is ...
+	http.Client
+	// Users is ...
+	Users map[string]struct{}
+	// URL is ...
+	URL string
+}
+
+// Validate is ...
+func (u *RemoteUpstream) Validate(s string) bool {
+	_, ok := u.Users[s]
+	return ok
+}
+
+// Consume is ...
+func (u *RemoteUpstream) Consume(n1, n2 int64) {}
+
+// HeaderLen is ...
+const HeaderLen = 56
+
+const (
+	// CmdConnect is ...
+	CmdConnect = 1
+	// CmdAssociate is ...
+	CmdAssociate = 3
+)
+
+// GenKey is ...
 func GenKey(s string, key []byte) {
 	hash := sha256.Sum224([]byte(s))
 	hex.Encode(key, hash[:])
 }
 
-func Handle(conn net.Conn, usr User) error {
-	return HandleConn(conn, &usr)
-}
+// Handle is ...
+func Handle(r io.Reader, w io.Writer) (int64, int64, error) {
+	b := [1 + MaxAddrLen + 2]byte{}
 
-func HandleConn(conn net.Conn, usr *User) (err error) {
-	defer conn.Close()
-
-	b := [1 + 2 + MaxAddrLen]byte{}
-
-	if _, er := io.ReadFull(conn, b[:1]); er != nil {
-		err = fmt.Errorf("read command error: %w", er)
-		return
+	// read command
+	if _, err := io.ReadFull(r, b[:1]); err != nil {
+		return 0, 0, fmt.Errorf("read command error: %w", err)
 	}
 
-	addr, er := ReadAddrBuffer(conn, b[3:])
-	if er != nil {
-		err = fmt.Errorf("read addr error: %w", er)
-		return
+	// read address
+	addr, err := ReadAddrBuffer(r, b[3:])
+	if err != nil {
+		return 0, 0, fmt.Errorf("read addr error: %w", err)
 	}
 
-	if _, er := io.ReadFull(conn, b[1:3]); er != nil {
-		err = fmt.Errorf("read 0x0d 0x0a error: %w", er)
-		return
+	// read 0x0d, 0x0a
+	if _, err := io.ReadFull(r, b[1:3]); err != nil {
+		return 0, 0, fmt.Errorf("read 0x0d 0x0a error: %w", err)
 	}
 
 	switch b[0] {
-	case cmdConnect:
-		nr, nw, er := HandleTCP(conn, addr.String())
-		usr.Consume(nr, nw)
-		if er != nil {
-			err = fmt.Errorf("handle tcp error: %w", er)
-		}
-	case cmdAssocaite:
-		nr, nw, er := HandleUDP(conn)
-		usr.Consume(nr, nw)
-		if er != nil {
-			err = fmt.Errorf("handle udp error: %w", er)
-		}
-	case cmdSmux, cmdSmux2:
-		er := HandleMux(conn, usr, b[0]>>4-6)
-		if er != nil {
-			err = fmt.Errorf("handle mux error: %w", er)
-		}
-	default:
-		err = fmt.Errorf("command error")
-	}
-	return
-}
-
-func HandleMux(conn net.Conn, usr *User, ver byte) (err error) {
-	sess, er := smux.Server(conn, &smux.Config{
-		Version:           int(ver),
-		KeepAliveInterval: 10 * time.Second,
-		KeepAliveTimeout:  30 * time.Second,
-		MaxFrameSize:      32768,
-		MaxReceiveBuffer:  4194304,
-		MaxStreamBuffer:   65536,
-	})
-	if er != nil {
-		err = fmt.Errorf("new smux server error: %w", er)
-		return
-	}
-	defer sess.Close()
-
-	wg := &sync.WaitGroup{}
-	for {
-		stream, er := sess.AcceptStream()
-		if er != nil {
-			if sess.IsClosed() || errors.Is(er, io.EOF) || errors.Is(er, smux.ErrInvalidProtocol) {
-				break
-			}
-			err = fmt.Errorf("accept stream error: %w", er)
-			break
-		}
-
-		wg.Add(1)
-		go HandleStream(stream, usr, wg)
-	}
-
-	wg.Wait()
-	return
-}
-
-func HandleStream(conn net.Conn, usr *User, wg *sync.WaitGroup) (err error) {
-	defer func(conn net.Conn, usr *User, wg *sync.WaitGroup) {
+	case CmdConnect:
+		tgt, err := ResolveTCPAddr(addr)
 		if err != nil {
-			if !errors.Is(err, smux.ErrInvalidProtocol) {
-				usr.logger.Error(usr.Name, zap.Error(err))
-			}
+			return 0, 0, fmt.Errorf("resolve tcp addr error: %w", err)
 		}
-		conn.Close()
-		wg.Done()
-	}(conn, usr, wg)
-
-	b := [1 + MaxAddrLen]byte{}
-
-	if _, er := io.ReadFull(conn, b[:1]); er != nil {
-		err = fmt.Errorf("read mux command error: %w", er)
-		return
-	}
-
-	addr, er := ReadAddrBuffer(conn, b[1:])
-	if er != nil {
-		err = fmt.Errorf("read mux addr error: %w", er)
-		return
-	}
-
-	switch b[0] {
-	case cmdConnect:
-		nr, nw, er := HandleTCP(conn, addr.String())
-		usr.Consume(nr, nw)
-		if er != nil {
-			err = fmt.Errorf("handle mux tcp error: %w", er)
+		nr, nw, err := HandleTCP(r, w, tgt)
+		if err != nil {
+			return nr, nw, fmt.Errorf("handle tcp error: %w", err)
 		}
-	case cmdAssocaite:
-		nr, nw, er := HandleUDP(conn)
-		usr.Consume(nr, nw)
-		if er != nil {
-			err = fmt.Errorf("handle mux udp error: %w", er)
+		return nr, nw, nil
+	case CmdAssociate:
+		nr, nw, err := HandleUDP(r, w)
+		if err != nil {
+			return nr, nw, fmt.Errorf("handle udp error: %w", err)
 		}
+		return nr, nw, nil
 	default:
-		err = fmt.Errorf("mux command error")
 	}
-	return
+	return 0, 0, errors.New("command error")
 }
 
-type data struct {
-	num int64
-	err error
-}
-
-// Handle trojan TCP stream
-func HandleTCP(conn net.Conn, addr string) (n1 int64, n2 int64, err error) {
-	rc, err := net.Dial("tcp", addr)
-	if err != nil {
-		return
-	}
-	defer rc.Close()
-
-	n1, n2, err = relay(NewDuplexConn(conn), rc.(*net.TCPConn))
-	if err != nil {
-		if ne := net.Error(nil); errors.As(err, &ne) {
-			if ne.Timeout() {
-				err = nil
-				return
-			}
-		}
-		if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, io.EOF) {
-			err = nil
-			return
-		}
-		err = fmt.Errorf("relay error: %w", err)
-	}
-
-	return
-}
-
-type CloseReader interface {
-	CloseRead() error
-}
-
-type CloseWriter interface {
-	CloseWrite() error
-}
-
-type DuplexConn interface {
-	net.Conn
-	CloseReader
-	CloseWriter
-}
-
-func NewDuplexConn(conn net.Conn) DuplexConn {
-	_, ok := conn.(DuplexConn)
-	if ok {
-		return conn.(DuplexConn)
-	}
-	return duplexConn{Conn: conn}
-}
-
-type duplexConn struct {
-	net.Conn
-}
-
-func (c duplexConn) ReadFrom(r io.Reader) (int64, error) {
-	if rt, ok := c.Conn.(io.ReaderFrom); ok {
-		return rt.ReadFrom(r)
-	}
-	return Copy(c.Conn, r)
-}
-
-func (c duplexConn) WriteTo(w io.Writer) (int64, error) {
-	if wt, ok := c.Conn.(io.WriterTo); ok {
-		return wt.WriteTo(w)
-	}
-	return Copy(w, c.Conn)
-}
-
-func (c duplexConn) CloseRead() error {
-	if close, ok := c.Conn.(CloseReader); ok {
-		return close.CloseRead()
-	}
-	return c.Conn.SetReadDeadline(time.Now())
-}
-
-func (c duplexConn) CloseWrite() error {
-	if close, ok := c.Conn.(CloseWriter); ok {
-		return close.CloseWrite()
-	}
-	return c.Conn.SetWriteDeadline(time.Now())
-}
-
-func relay(c, rc DuplexConn) (int64, int64, error) {
-	ch := make(chan data, 1)
-	go relay2(c, rc, ch)
-
-	n, err := Copy(rc, c)
-	if err != nil {
-		rc.Close()
-		c.Close()
-	} else {
-		rc.CloseWrite()
-		c.CloseRead()
-	}
-
-	r := <-ch
-
-	if err == nil {
-		err = r.err
-	}
-	if errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, smux.ErrTimeout) {
-		err = nil
-	}
-
-	return n, r.num, err
-}
-
-func relay2(c, rc DuplexConn, ch chan data) {
-	n, err := Copy(c, rc)
-	if err != nil {
-		c.Close()
-		rc.Close()
-	} else {
-		c.CloseWrite()
-		rc.CloseRead()
-	}
-
-	ch <- data{num: n, err: err}
-}
-
-func Copy(w io.Writer, r io.Reader) (n int64, err error) {
-	if c, ok := w.(duplexConn); ok {
-		w = c.Conn
-	}
-	if c, ok := r.(duplexConn); ok {
-		r = c.Conn
-	}
-	if wt, ok := r.(io.WriterTo); ok {
-		return wt.WriteTo(w)
-	}
-	if rt, ok := w.(io.ReaderFrom); ok {
-		if _, ok := rt.(*net.TCPConn); !ok {
-			return rt.ReadFrom(r)
-		}
-	}
-
-	b := byteBuffer.Get().([]byte)
-	defer byteBuffer.Put(b)
-
-	for {
-		nr, er := r.Read(b)
-		if nr > 0 {
-			nw, ew := w.Write(b[:nr])
-			n += int64(nw)
-			if ew != nil {
-				err = ew
-				break
-			}
-			if nr != nw {
-				err = io.ErrShortWrite
-				break
-			}
-		}
-		if er != nil {
-			if errors.Is(er, io.EOF) {
-				break
-			}
-			err = er
-			break
-		}
-	}
-	return n, err
-}
-
-// handle trojan UDP packet
-// [AddrType(1 byte)][Addr(max 256 byte)][Port(2 byte)][Len(2 byte)][0x0d, 0x0a][Data(max 65536 byte)]
-func HandleUDP(conn net.Conn) (int64, int64, error) {
-	rc, err := net.ListenPacket("udp", "")
+// HandleTCP is ...
+// trojan TCP stream
+func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error) {
+	rc, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
 		return 0, 0, err
 	}
-
-	ch := make(chan data, 1)
-	go copyWithChannel(conn, rc, time.Minute*5, ch)
-
-	current := make([]byte, MaxAddrLen)
-	netAddr := (*net.UDPAddr)(nil)
-
-	b := byteBuffer.Get().([]byte)
-	defer byteBuffer.Put(b)
-
-	n := int64(0)
-	for {
-		raddr, er := ReadAddrBuffer(conn, b)
-		if er != nil {
-			if ne := net.Error(nil); errors.As(er, &ne) {
-				if ne.Timeout() {
-					break
-				}
-			}
-			if errors.Is(er, smux.ErrTimeout) || errors.Is(er, io.ErrClosedPipe) || errors.Is(er, io.EOF) {
-				break
-			}
-			err = fmt.Errorf("read addr error: %w", er)
-			break
-		}
-
-		naddr := len(raddr)
-
-		if !bytes.Equal(current, []byte(raddr)) {
-			tt, er := ResolveUDPAddr(raddr)
-			if er != nil {
-				err = fmt.Errorf("resolve target error: %w", er)
-				break
-			}
-			current = append(current[:0], raddr...)
-			netAddr = tt
-		}
-
-		if _, er := io.ReadFull(conn, b[naddr:naddr+4]); er != nil {
-			if ne := net.Error(nil); errors.As(er, &ne) {
-				if ne.Timeout() {
-					break
-				}
-			}
-			if errors.Is(er, smux.ErrTimeout) || errors.Is(er, io.ErrClosedPipe) {
-				break
-			}
-			err = fmt.Errorf("read size info error: %w", er)
-			break
-		}
-
-		naddr += (int(b[naddr])<<8 | int(b[naddr+1])) + 4
-		n += int64(naddr)
-
-		buf := b[len(raddr)+4 : naddr]
-		if _, er := io.ReadFull(conn, buf); er != nil {
-			if ne := net.Error(nil); errors.As(er, &ne) {
-				if ne.Timeout() {
-					break
-				}
-			}
-			if errors.Is(er, smux.ErrTimeout) || errors.Is(er, io.ErrClosedPipe) {
-				break
-			}
-			err = fmt.Errorf("read data error: %w", er)
-			break
-		}
-
-		rc.SetWriteDeadline(time.Now().Add(time.Minute * 5))
-		if _, er := rc.WriteTo(buf, netAddr); er != nil {
-			if ne := net.Error(nil); errors.As(er, &ne) {
-				if ne.Timeout() {
-					break
-				}
-			}
-			if errors.Is(err, os.ErrDeadlineExceeded) {
-				break
-			}
-			err = fmt.Errorf("writeto error: %w", er)
-			break
-		}
-	}
-
-	rc.SetReadDeadline(time.Now())
-	d := <-ch
-
-	if err == nil {
-		err = d.err
-	}
-
-	return n, d.num, err
-}
-
-func copyWithChannel(conn net.Conn, rc net.PacketConn, timeout time.Duration, ch chan data) {
 	defer rc.Close()
 
-	d := data{num: 0, err: nil}
+	type Result struct {
+		Num int64
+		Err error
+	}
 
-	b := byteBuffer.Get().([]byte)
-	defer byteBuffer.Put(b)
+	errCh := make(chan Result, 1)
+	go func(rc *net.TCPConn, r io.Reader, errCh chan Result) {
+		nw, err := io.Copy(io.Writer(rc), r)
+		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
+			rc.CloseWrite()
+			errCh <- Result{Num: nw, Err: nil}
+			return
+		}
+		rc.SetReadDeadline(time.Now())
+		errCh <- Result{Num: nw, Err: err}
+	}(rc, r, errCh)
 
-	b[MaxAddrLen+2] = 0x0d
-	b[MaxAddrLen+3] = 0x0a
-	for {
-		rc.SetReadDeadline(time.Now().Add(timeout))
-		n, src, err := rc.ReadFrom(b[MaxAddrLen+4:])
-		if err != nil {
-			if ne := net.Error(nil); errors.As(err, &ne) {
-				if ne.Timeout() {
-					break
-				}
+	nr, nw, err := func(rc *net.TCPConn, w io.Writer, errCh chan Result) (int64, int64, error) {
+		nr, err := io.Copy(w, io.Reader(rc))
+		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
+			type CloseWriter interface {
+				CloseWrite() error
 			}
+			if closer, ok := w.(CloseWriter); ok {
+				closer.CloseWrite()
+			}
+			r := <-errCh
+			return nr, r.Num, r.Err
+		}
+		rc.SetWriteDeadline(time.Now())
+		rc.CloseWrite()
+		r := <-errCh
+		return nr, r.Num, err
+	}(rc, w, errCh)
+
+	return nr, nw, err
+}
+
+// HandleUDP is ...
+// [AddrType(1 byte)][Addr(max 256 byte)][Port(2 byte)][Len(2 byte)][0x0d, 0x0a][Data(max 65535 byte)]
+func HandleUDP(r io.Reader, w io.Writer) (int64, int64, error) {
+	rc, err := net.ListenUDP("udp", nil)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer rc.Close()
+
+	type Result struct {
+		Num int64
+		Err error
+	}
+
+	errCh := make(chan Result, 1)
+	go func(rc *net.UDPConn, r io.Reader, errCh chan Result) (nr int64, err error) {
+		defer func() {
 			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrDeadlineExceeded) {
+				err = nil
+			}
+			errCh <- Result{Num: nr, Err: err}
+		}()
+
+		// save previous address
+		bb := make([]byte, MaxAddrLen)
+		tt := (*net.UDPAddr)(nil)
+
+		b := make([]byte, 16*1024)
+		for {
+			raddr, er := ReadAddrBuffer(r, b)
+			if er != nil {
+				err = er
 				break
 			}
-			d.err = fmt.Errorf("readfrom error: %w", err)
-			break
-		}
 
-		b[MaxAddrLen] = byte(n >> 8)
-		b[MaxAddrLen+1] = byte(n)
+			l := len(raddr.Addr)
 
-		naddr := func(bb []byte, addr *net.UDPAddr) int64 {
-			if ipv4 := addr.IP.To4(); ipv4 != nil {
-				const offset = MaxAddrLen - (1 + net.IPv4len + 2)
-				bb[offset] = AddrTypeIPv4
-				copy(bb[offset+1:], ipv4)
-				bb[offset+1+net.IPv4len], bb[offset+1+net.IPv4len+1] = byte(addr.Port>>8), byte(addr.Port)
-				return 1 + net.IPv4len + 2
-			} else {
-				const offset = MaxAddrLen - (1 + net.IPv6len + 2)
-				bb[offset] = AddrTypeIPv6
-				copy(bb[offset+1:], addr.IP.To16())
-				bb[offset+1+net.IPv6len], bb[offset+1+net.IPv6len+1] = byte(addr.Port>>8), byte(addr.Port)
-				return 1 + net.IPv6len + 2
-			}
-		}(b[:MaxAddrLen], src.(*net.UDPAddr))
-		d.num += 4 + int64(n) + naddr
-
-		if _, err := conn.Write(b[MaxAddrLen-naddr : MaxAddrLen+4+n]); err != nil {
-			if ne := net.Error(nil); errors.As(err, &ne) {
-				if ne.Timeout() {
+			if !bytes.Equal(bb, raddr.Addr) {
+				addr, er := ResolveUDPAddr(raddr)
+				if er != nil {
+					err = er
 					break
 				}
+				bb = append(bb[:0], raddr.Addr...)
+				tt = addr
 			}
-			d.err = fmt.Errorf("write packet error: %w", err)
-			break
+
+			if _, er := io.ReadFull(r, b[l:l+4]); er != nil {
+				err = er
+				break
+			}
+
+			l += (int(b[l])<<8 | int(b[l+1]))
+			nr += int64(l) + 4
+
+			buf := b[len(raddr.Addr):l]
+			if _, er := io.ReadFull(r, buf); er != nil {
+				err = er
+				break
+			}
+
+			if _, ew := rc.WriteToUDP(buf, tt); ew != nil {
+				err = ew
+				break
+			}
 		}
-	}
+		rc.SetReadDeadline(time.Now())
+		return
+	}(rc, r, errCh)
 
-	ch <- d
-	return
-}
+	nr, nw, err := func(rc *net.UDPConn, w io.Writer, errCh chan Result, timeout time.Duration) (nr, nw int64, err error) {
+		b := make([]byte, 16*1024)
 
-type emptyReader struct{}
+		b[MaxAddrLen+2] = 0x0d
+		b[MaxAddrLen+3] = 0x0a
+		for {
+			rc.SetReadDeadline(time.Now().Add(timeout))
+			n, addr, er := rc.ReadFrom(b[MaxAddrLen+4:])
+			if er != nil {
+				err = er
+				break
+			}
 
-func (emptyReader) Read(b []byte) (int, error) {
-	return 0, io.EOF
-}
+			b[MaxAddrLen] = byte(n >> 8)
+			b[MaxAddrLen+1] = byte(n)
 
-// implement net.Conn
-type WebSocketConn struct {
-	*websocket.Conn
-	Reader io.Reader
-}
+			l := func(bb []byte, addr *net.UDPAddr) int64 {
+				if ipv4 := addr.IP.To4(); ipv4 != nil {
+					const offset = MaxAddrLen - (1 + net.IPv4len + 2)
+					bb[offset] = AddrTypeIPv4
+					copy(bb[offset+1:], ipv4)
+					bb[offset+1+net.IPv4len], bb[offset+1+net.IPv4len+1] = byte(addr.Port>>8), byte(addr.Port)
+					return 1 + net.IPv4len + 2
+				} else {
+					const offset = MaxAddrLen - (1 + net.IPv6len + 2)
+					bb[offset] = AddrTypeIPv6
+					copy(bb[offset+1:], addr.IP.To16())
+					bb[offset+1+net.IPv6len], bb[offset+1+net.IPv6len+1] = byte(addr.Port>>8), byte(addr.Port)
+					return 1 + net.IPv6len + 2
+				}
+			}(b[:MaxAddrLen], addr.(*net.UDPAddr))
+			nr += 4 + int64(n) + l
 
-func NewWebSocketConn(conn *websocket.Conn) *WebSocketConn {
-	return &WebSocketConn{
-		Conn:   conn,
-		Reader: emptyReader{},
-	}
-}
-
-func (conn *WebSocketConn) Read(b []byte) (int, error) {
-	n, err := conn.Reader.Read(b)
-	if n > 0 {
-		return n, nil
-	}
-
-	_, conn.Reader, err = conn.Conn.NextReader()
-	if err != nil {
-		if er := (*websocket.CloseError)(nil); errors.As(err, &er) {
-			return 0, io.EOF
+			if _, ew := w.Write(b[MaxAddrLen-l : MaxAddrLen+4+n]); ew != nil {
+				err = ew
+				break
+			}
 		}
-		return 0, err
-	}
+		rc.SetWriteDeadline(time.Now())
 
-	n, err = conn.Reader.Read(b)
-	return n, nil
-}
-
-func (conn *WebSocketConn) Write(b []byte) (int, error) {
-	err := conn.Conn.WriteMessage(websocket.BinaryMessage, b)
-	if err != nil {
-		if er := (*websocket.CloseError)(nil); errors.As(err, &er) {
-			return 0, io.EOF
+		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrDeadlineExceeded) {
+			r := <-errCh
+			return nr, r.Num, r.Err
 		}
-		return 0, err
-	}
-	return len(b), nil
-}
+		r := <-errCh
+		return nr, r.Num, err
+	}(rc, w, errCh, time.Minute*10)
 
-func (conn *WebSocketConn) SetDeadline(t time.Time) error {
-	conn.SetReadDeadline(t)
-	conn.SetWriteDeadline(t)
-	return nil
-}
-
-func (conn *WebSocketConn) Close() (err error) {
-	err = conn.Conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Second*5))
-	conn.Conn.Close()
-	return
+	return nr, nw, err
 }
