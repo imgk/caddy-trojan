@@ -2,13 +2,11 @@
 
 ## Build with xcaddy
 ```
-$ xcaddy build \
-    --with github.com/imgk/caddy-trojan/handler \
-    --with github.com/imgk/caddy-trojan/listerner
+$ xcaddy build --with github.com/imgk/caddy-trojan
 ```
 
 ## Config
-```
+```jsonc
 {
     "apps": {
         "http": {
@@ -16,29 +14,16 @@ $ xcaddy build \
                 "": {
                     "listener_wrappers": [{
                         "wrapper": "trojan",
-                        "trojan": {
-                            "users": ["user-1", "user-2"],
-                            "redis": {
-                                "addr": "",
-                                "password": "",
-                                "db": 0
-                            }
-                        }
+                        "users": ["user-1", "user-2"] 
                     }],
+                    // set true to enable http2
                     "allow_h2c": true,
                     "routes": [
                         {
                             "handle": [
                                 {
                                     "handler": "trojan",
-                                    "trojan": {
-                                        "users": ["user-1", "user-2"],
-                                        "redis": {
-                                            "addr": "",
-                                            "password": "",
-                                            "db": 0
-                                        }
-                                    }
+                                    "users", ["user-1", "user-2"]
                                 }
                             ]
                         }
