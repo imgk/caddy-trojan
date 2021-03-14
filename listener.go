@@ -170,9 +170,9 @@ func (c *rawConn) Read(b []byte) (int, error) {
 		return c.Conn.Read(b)
 	}
 	n, err := c.r.Read(b)
-	if err == nil || errors.Is(err, io.EOF) {
-		err = nil
+	if errors.Is(err, io.EOF) {
 		c.r = nil
+		return n, nil
 	}
 	return n, err
 }
