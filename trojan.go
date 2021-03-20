@@ -33,14 +33,17 @@ type Upstream interface {
 }
 
 // NewUpstream is ...
-func NewUpstream(ss []string, s string) (Upstream, error) {
+func NewUpstream(ss []string, s string, encoding bool) (Upstream, error) {
 	if s == "" {
 		u := &LocalUpstream{Users: make(map[string]struct{})}
 		b := [HeaderLen]byte{}
 		for _, v := range ss {
 			GenKey(v, b[:])
-			u.Users[string(b[:])] = struct{}{}
-			u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+			if encoding {
+				u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+			} else {
+				u.Users[string(b[:])] = struct{}{}
+			}
 		}
 		return u, nil
 	}
@@ -48,8 +51,11 @@ func NewUpstream(ss []string, s string) (Upstream, error) {
 	b := [HeaderLen]byte{}
 	for _, v := range ss {
 		GenKey(v, b[:])
-		u.Users[string(b[:])] = struct{}{}
-		u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+		if encoding {
+			u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+		} else {
+			u.Users[string(b[:])] = struct{}{}
+		}
 	}
 	return u, nil
 }

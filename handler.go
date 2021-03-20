@@ -44,7 +44,7 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Handler) Provision(ctx caddy.Context) (err error) {
 	m.logger = ctx.Logger(m)
-	m.upstream, err = NewUpstream(m.Users, m.Upstream)
+	m.upstream, err = NewUpstream(m.Users, m.Upstream, true /* base64 encoding of trojan header */)
 	return
 }
 
