@@ -58,6 +58,9 @@ func (m *Handler) Provision(ctx caddy.Context) (err error) {
 
 // Cleanup implements caddy.CleanerUpper
 func (m *Handler) Cleanup() error {
+	if len(m.Users) == 0 && m.Upstream == "" {
+		return nil
+	}
 	m.upstream.Reset()
 	return nil
 }

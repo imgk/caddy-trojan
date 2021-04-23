@@ -59,6 +59,9 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) (err error) {
 
 // Cleanup implements caddy.CleanerUpper
 func (m *ListenerWrapper) Cleanup() error {
+	if len(m.Users) == 0 && m.Upstream == "" {
+		return nil
+	}
 	m.upstream.Reset()
 	return nil
 }
