@@ -13,7 +13,6 @@ import (
 	"os"
 	"reflect"
 	"sync"
-	"sync/atomic"
 	"time"
 	"unsafe"
 )
@@ -38,7 +37,6 @@ func (u *Upstream) Setup(ss []string, s string) (*Upstream, error) {
 		u.Unlock()
 		return nil, errors.New("not valid information for setup")
 	}
-	atomic.StoreInt32(&u.set, 1)
 	u.Users = make(map[string]struct{})
 	b := [HeaderLen]byte{}
 	for _, v := range ss {
@@ -58,15 +56,21 @@ type Upstream struct {
 	Users map[string]struct{}
 	// Client is ...
 	http.Client
-
-	// init, 1 for ok
-	set int32
 }
 
 // Ready is ...
 func (u *Upstream) Ready() bool {
-	// fmt.Println(u.set)
-	return atomic.LoadInt32(&u.set) == 1
+	u.Lock()
+	ok := u.Users != nil
+	u.Unlock()
+	return ok
+}
+
+// Reset is ...
+func (u *Upstream) Reset() {
+	u.Lock()
+	u.Users = nil
+	u.Unlock()
 }
 
 // Validate is ...

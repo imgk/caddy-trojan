@@ -57,6 +57,12 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) (err error) {
 	return errors.New("only one upstream is allowed")
 }
 
+// Cleanup implements caddy.CleanerUpper
+func (m *ListenerWrapper) Cleanup() error {
+	m.upstream.Reset()
+	return nil
+}
+
 // WrapListener implements caddy.ListenWrapper
 func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
 	ln := NewListener(l, m.upstream, m.logger)
@@ -68,6 +74,7 @@ func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
 var (
 	_ caddy.Provisioner     = (*ListenerWrapper)(nil)
 	_ caddy.ListenerWrapper = (*ListenerWrapper)(nil)
+	_ caddy.CleanerUpper    = (*ListenerWrapper)(nil)
 )
 
 // Listener is ...

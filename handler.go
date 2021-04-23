@@ -56,6 +56,12 @@ func (m *Handler) Provision(ctx caddy.Context) (err error) {
 	return errors.New("only one upstream is allowed")
 }
 
+// Cleanup implements caddy.CleanerUpper
+func (m *Handler) Cleanup() error {
+	m.upstream.Reset()
+	return nil
+}
+
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
 func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	// trojan over http2/http3
@@ -119,6 +125,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 var (
 	_ caddy.Provisioner           = (*Handler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
+	_ caddy.CleanerUpper          = (*Handler)(nil)
 )
 
 // FlushWriter is ...
