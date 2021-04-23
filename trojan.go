@@ -36,7 +36,7 @@ func (u *Upstream) Setup(ss []string, s string) (*Upstream, error) {
 	u.Lock()
 	if len(ss) == 0 && s == "" {
 		u.Unlock()
-		return nil, nil
+		return nil, errors.New("not valid information for setup")
 	}
 	atomic.StoreInt32(&u.set, 1)
 	u.Users = make(map[string]struct{})
