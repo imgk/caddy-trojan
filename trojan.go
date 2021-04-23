@@ -57,7 +57,7 @@ type Upstream struct {
 // Ready is ...
 func (u *Upstream) Ready() bool {
 	u.Lock()
-	ok := u.Users == nil
+	ok := u.Users != nil
 	u.Unlock()
 	return ok
 }
