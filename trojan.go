@@ -13,6 +13,7 @@ import (
 	"os"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 )
@@ -33,6 +34,11 @@ var upstream = &Upstream{}
 // Setup is ...
 func (u *Upstream) Setup(ss []string, s string) (*Upstream, error) {
 	u.Lock()
+	if len(ss) == 0 && s == "" {
+		u.Unlock()
+		return nil, nil
+	}
+	atomic.StoreInt32(&u.set, 1)
 	u.Users = make(map[string]struct{})
 	b := [HeaderLen]byte{}
 	for _, v := range ss {
@@ -52,14 +58,15 @@ type Upstream struct {
 	Users map[string]struct{}
 	// Client is ...
 	http.Client
+
+	// init, 1 for ok
+	set int32
 }
 
 // Ready is ...
 func (u *Upstream) Ready() bool {
-	u.Lock()
-	ok := u.Users != nil
-	u.Unlock()
-	return ok
+	// fmt.Println(u.set)
+	return atomic.LoadInt32(&u.set) == 1
 }
 
 // Validate is ...

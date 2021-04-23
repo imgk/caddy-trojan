@@ -46,6 +46,10 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) (err error) {
 	m.logger = ctx.Logger(m)
+	if len(m.Users) == 0 && m.Upstream == "" {
+		m.upstream = upstream
+		return
+	}
 	if !upstream.Ready() {
 		m.upstream, err = upstream.Setup(m.Users, m.Upstream)
 		return
