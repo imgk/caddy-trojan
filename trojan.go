@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 	"unsafe"
 )
@@ -26,73 +27,51 @@ func ByteSliceToString(b []byte) string {
 	return *(*string)(unsafe.Pointer(hdr))
 }
 
-// Upstream is ...
-type Upstream interface {
-	Validate(string) bool
-	Consume(int64, int64)
-}
+// upstream is a global repository for saving all users
+var upstream = &Upstream{}
 
-// NewUpstream is ...
-func NewUpstream(ss []string, s string, encoding bool) (Upstream, error) {
-	if s == "" {
-		u := &LocalUpstream{Users: make(map[string]struct{})}
-		b := [HeaderLen]byte{}
-		for _, v := range ss {
-			GenKey(v, b[:])
-			if encoding {
-				u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
-			} else {
-				u.Users[string(b[:])] = struct{}{}
-			}
-		}
-		return u, nil
-	}
-	u := &RemoteUpstream{Users: make(map[string]struct{})}
+// Setup is ...
+func (u *Upstream) Setup(ss []string, s string) (*Upstream, error) {
+	u.Lock()
+	u.Users = make(map[string]struct{})
 	b := [HeaderLen]byte{}
 	for _, v := range ss {
 		GenKey(v, b[:])
-		if encoding {
-			u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
-		} else {
-			u.Users[string(b[:])] = struct{}{}
-		}
+		u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+		u.Users[string(b[:])] = struct{}{}
 	}
+	u.Unlock()
 	return u, nil
 }
 
-// LocalUpstream is ...
-type LocalUpstream struct {
+// Upstream is ...
+type Upstream struct {
+	// RWMutex is ...
+	sync.RWMutex
 	// Users is ...
 	Users map[string]struct{}
-}
-
-// Validate is ...
-func (u *LocalUpstream) Validate(s string) bool {
-	_, ok := u.Users[s]
-	return ok
-}
-
-// Consume is ...
-func (u *LocalUpstream) Consume(n1, n2 int64) {}
-
-// RemoteUpstream is ...
-type RemoteUpstream struct {
 	// Client is ...
 	http.Client
-	// Users is ...
-	Users map[string]struct{}
-	// URL is ...
-	URL string
+}
+
+// Ready is ...
+func (u *Upstream) Ready() bool {
+	u.Lock()
+	ok := u.Users == nil
+	u.Unlock()
+	return ok
 }
 
 // Validate is ...
-func (u *RemoteUpstream) Validate(s string) bool {
+func (u *Upstream) Validate(s string) bool {
+	u.RLock()
 	_, ok := u.Users[s]
+	u.RUnlock()
 	return ok
 }
 
 // Consume is ...
-func (u *RemoteUpstream) Consume(n1, n2 int64) {}
+func (u *Upstream) Consume(s string, enc bool, n1, n2 int64) {}
 
 // HeaderLen is ...
 const HeaderLen = 56

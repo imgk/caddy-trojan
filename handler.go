@@ -1,6 +1,7 @@
 package trojan
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,7 +25,7 @@ type Handler struct {
 	Upstream string `json:"upstream,omitempty"`
 
 	// upstream is ...
-	upstream Upstream
+	upstream *Upstream
 
 	// logger is ...
 	logger *zap.Logger
@@ -44,8 +45,11 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Handler) Provision(ctx caddy.Context) (err error) {
 	m.logger = ctx.Logger(m)
-	m.upstream, err = NewUpstream(m.Users, m.Upstream, true /* base64 encoding of trojan header */)
-	return
+	if upstream.Ready() {
+		m.upstream, err = upstream.Setup(m.Users, m.Upstream)
+		return
+	}
+	return errors.New("only one upstream is allowed")
 }
 
 // ServeHTTP implements caddyhttp.MiddlewareHandler.
@@ -73,7 +77,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle http2/http3 error: %v", err))
 		}
-		m.upstream.Consume(nr, nw)
+		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), true, nr, nw)
 		return nil
 	}
 
@@ -101,7 +105,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
-		m.upstream.Consume(nr, nw)
+		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), true, nr, nw)
 		return nil
 	}
 	return next.ServeHTTP(w, r)

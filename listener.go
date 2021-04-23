@@ -29,7 +29,7 @@ type ListenerWrapper struct {
 	Upstream string `json:"upstream,omitempty"`
 
 	// upstream is ...
-	upstream Upstream
+	upstream *Upstream
 
 	// logger is ...
 	logger *zap.Logger
@@ -46,8 +46,11 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) (err error) {
 	m.logger = ctx.Logger(m)
-	m.upstream, err = NewUpstream(m.Users, m.Upstream, false /* no base64 encoding */)
-	return
+	if upstream.Ready() {
+		m.upstream, err = upstream.Setup(m.Users, m.Upstream)
+		return
+	}
+	return errors.New("only one upstream is allowed")
 }
 
 // WrapListener implements caddy.ListenWrapper
@@ -69,7 +72,7 @@ type Listener struct {
 	net.Listener
 
 	// upstream is ...
-	upstream Upstream
+	upstream *Upstream
 
 	// logging
 	logger *zap.Logger
@@ -82,7 +85,7 @@ type Listener struct {
 }
 
 // NewListener is ...
-func NewListener(ln net.Listener, up Upstream, logger *zap.Logger) *Listener {
+func NewListener(ln net.Listener, up *Upstream, logger *zap.Logger) *Listener {
 	l := &Listener{
 		Listener: ln,
 		upstream: up,
@@ -128,7 +131,7 @@ func (l *Listener) loop() {
 			continue
 		}
 
-		go func(c net.Conn, lg *zap.Logger, up Upstream) {
+		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
 			b := make([]byte, HeaderLen+2)
 			if _, err := io.ReadFull(c, b); err != nil {
 				lg.Error(fmt.Sprintf("read prefix error: %v", err))
@@ -153,7 +156,7 @@ func (l *Listener) loop() {
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
-			up.Consume(nr, nw)
+			up.Consume(ByteSliceToString(b[:HeaderLen]), false, nr, nw)
 		}(conn, l.logger, l.upstream)
 	}
 }
