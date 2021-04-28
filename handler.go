@@ -1,7 +1,6 @@
 package trojan
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,17 +18,10 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
-	// Users is ...
-	Users []string `json:"users"`
-	// Upstream is ...
-	Upstream string `json:"upstream,omitempty"`
-
 	// upstream is ...
 	upstream *Upstream
-
 	// logger is ...
 	logger *zap.Logger
-
 	// upgrader is ...
 	upgrader websocket.Upgrader
 }
@@ -43,25 +35,9 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 }
 
 // Provision implements caddy.Provisioner.
-func (m *Handler) Provision(ctx caddy.Context) (err error) {
+func (m *Handler) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
-	if len(m.Users) == 0 && m.Upstream == "" {
-		m.upstream = upstream
-		return
-	}
-	if !upstream.Ready() {
-		m.upstream, err = upstream.Setup(m.Users, m.Upstream)
-		return
-	}
-	return errors.New("only one upstream is allowed")
-}
-
-// Cleanup implements caddy.CleanerUpper
-func (m *Handler) Cleanup() error {
-	if len(m.Users) == 0 && m.Upstream == "" {
-		return nil
-	}
-	m.upstream.Reset()
+	m.upstream = upstream
 	return nil
 }
 
@@ -128,7 +104,6 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 var (
 	_ caddy.Provisioner           = (*Handler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
-	_ caddy.CleanerUpper          = (*Handler)(nil)
 )
 
 // FlushWriter is ...

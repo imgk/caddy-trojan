@@ -23,14 +23,8 @@ func init() {
 // and aead cipher defined by go-shadowsocks2, and return a normal page if
 // failed.
 type ListenerWrapper struct {
-	// Users is ...
-	Users []string `json:"users"`
-	// Upstream is ...
-	Upstream string `json:"upstream,omitempty"`
-
 	// upstream is ...
 	upstream *Upstream
-
 	// logger is ...
 	logger *zap.Logger
 }
@@ -44,25 +38,9 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 }
 
 // Provision implements caddy.Provisioner.
-func (m *ListenerWrapper) Provision(ctx caddy.Context) (err error) {
+func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
-	if len(m.Users) == 0 && m.Upstream == "" {
-		m.upstream = upstream
-		return
-	}
-	if !upstream.Ready() {
-		m.upstream, err = upstream.Setup(m.Users, m.Upstream)
-		return
-	}
-	return errors.New("only one upstream is allowed")
-}
-
-// Cleanup implements caddy.CleanerUpper
-func (m *ListenerWrapper) Cleanup() error {
-	if len(m.Users) == 0 && m.Upstream == "" {
-		return nil
-	}
-	m.upstream.Reset()
+	m.upstream = upstream
 	return nil
 }
 
@@ -77,23 +55,18 @@ func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
 var (
 	_ caddy.Provisioner     = (*ListenerWrapper)(nil)
 	_ caddy.ListenerWrapper = (*ListenerWrapper)(nil)
-	_ caddy.CleanerUpper    = (*ListenerWrapper)(nil)
 )
 
 // Listener is ...
 type Listener struct {
 	// Listener is ...
 	net.Listener
-
 	// upstream is ...
 	upstream *Upstream
-
 	// logging
 	logger *zap.Logger
-
 	// return *rawConn
 	conns chan *rawConn
-
 	// close channel
 	closed chan struct{}
 }
@@ -166,7 +139,7 @@ func (l *Listener) loop() {
 			defer c.Close()
 			lg.Info(fmt.Sprintf("handle trojan net.Conn from %v", c.RemoteAddr()))
 
-			nr, nw, err := Handle(c, c)
+			nr, nw, err := Handle(io.Reader(c), io.Writer(c))
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}

@@ -9,13 +9,21 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"os"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 )
+
+// upstream is a global repository for saving all users
+var upstream = &Upstream{}
+
+func init() {
+	upstream.users = make(map[string]struct{})
+	upstream.usage.repo = make(map[string]usage)
+}
 
 // ByteSliceToString is ...
 func ByteSliceToString(b []byte) string {
@@ -27,62 +35,120 @@ func ByteSliceToString(b []byte) string {
 	return *(*string)(unsafe.Pointer(hdr))
 }
 
-// upstream is a global repository for saving all users
-var upstream = &Upstream{}
+// StringToByteSlice is ...
+func StringToByteSlice(s string) []byte {
+	ptr := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	hdr := &reflect.SliceHeader{
+		Data: ptr.Data,
+		Cap:  ptr.Len,
+		Len:  ptr.Len,
+	}
+	return *(*[]byte)(unsafe.Pointer(hdr))
+}
 
-// Setup is ...
-func (u *Upstream) Setup(ss []string, s string) (*Upstream, error) {
-	u.Lock()
-	if len(ss) == 0 && s == "" {
-		u.Unlock()
-		return nil, errors.New("not valid information for setup")
-	}
-	u.Users = make(map[string]struct{})
-	b := [HeaderLen]byte{}
-	for _, v := range ss {
-		GenKey(v, b[:])
-		u.Users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
-		u.Users[string(b[:])] = struct{}{}
-	}
-	u.Unlock()
-	return u, nil
+type usage struct {
+	up   int64
+	down int64
 }
 
 // Upstream is ...
 type Upstream struct {
 	// RWMutex is ...
 	sync.RWMutex
-	// Users is ...
-	Users map[string]struct{}
-	// Client is ...
-	http.Client
+	// users is ...
+	users map[string]struct{}
+	// users usage
+	usage struct {
+		// RWMutex is ...
+		sync.RWMutex
+		// repo is ...
+		repo map[string]usage
+	}
+
+	// total usage
+	total usage
 }
 
-// Ready is ...
-func (u *Upstream) Ready() bool {
+// AddKey is ...
+func (u *Upstream) AddKey(k string) error {
 	u.Lock()
-	ok := u.Users != nil
+	u.users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(k)))] = struct{}{}
+	u.users[k] = struct{}{}
 	u.Unlock()
-	return ok
+	return nil
 }
 
-// Reset is ...
-func (u *Upstream) Reset() {
+// Add is ...
+func (u *Upstream) Add(s string) error {
 	u.Lock()
-	u.Users = nil
+	b := [HeaderLen]byte{}
+	GenKey(s, b[:])
+	u.users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
+	u.users[string(b[:])] = struct{}{}
 	u.Unlock()
+	return nil
+}
+
+// Del is ...
+func (u *Upstream) Del(s string) error {
+	u.Lock()
+	b := [HeaderLen]byte{}
+	GenKey(s, b[:])
+	delete(u.users, fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:])))
+	delete(u.users, string(b[:]))
+	u.Unlock()
+	return nil
+}
+
+// Range is ...
+func (u *Upstream) Range(fn func(k string, up, down int64)) {
+	const AuthLen = 82
+
+	u.RLock()
+	for k := range u.users {
+		if len(k) == AuthLen {
+			continue
+		}
+
+		u.usage.RLock()
+		v, ok := u.usage.repo[k]
+		u.usage.RUnlock()
+		if !ok {
+			v = usage{}
+		}
+
+		fn(k, v.up, v.down)
+	}
+	u.RUnlock()
 }
 
 // Validate is ...
 func (u *Upstream) Validate(s string) bool {
 	u.RLock()
-	_, ok := u.Users[s]
+	_, ok := u.users[s]
 	u.RUnlock()
 	return ok
 }
 
 // Consume is ...
-func (u *Upstream) Consume(s string, enc bool, n1, n2 int64) {}
+func (u *Upstream) Consume(s string, enc bool, nr, nw int64) {
+	if enc {
+		b, _ := base64.StdEncoding.DecodeString(s[6:])
+		s = ByteSliceToString(b)
+	}
+	u.usage.Lock()
+	use, ok := u.usage.repo[s]
+	if !ok {
+		use = usage{}
+	}
+	use.up += nr
+	use.down += nw
+	u.usage.repo[s] = use
+	u.usage.Unlock()
+
+	atomic.AddInt64(&u.total.up, nr)
+	atomic.AddInt64(&u.total.down, nw)
+}
 
 // HeaderLen is ...
 const HeaderLen = 56
@@ -132,7 +198,7 @@ func Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 		}
 		return nr, nw, nil
 	case CmdAssociate:
-		nr, nw, err := HandleUDP(r, w)
+		nr, nw, err := HandleUDP(r, w, time.Minute*10)
 		if err != nil {
 			return nr, nw, fmt.Errorf("handle udp error: %w", err)
 		}
@@ -158,18 +224,18 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 
 	errCh := make(chan Result, 1)
 	go func(rc *net.TCPConn, r io.Reader, errCh chan Result) {
-		nw, err := io.Copy(io.Writer(rc), r)
+		nr, err := io.Copy(io.Writer(rc), r)
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
 			rc.CloseWrite()
-			errCh <- Result{Num: nw, Err: nil}
+			errCh <- Result{Num: nr, Err: nil}
 			return
 		}
 		rc.SetReadDeadline(time.Now())
-		errCh <- Result{Num: nw, Err: err}
+		errCh <- Result{Num: nr, Err: err}
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.TCPConn, w io.Writer, errCh chan Result) (int64, int64, error) {
-		nr, err := io.Copy(w, io.Reader(rc))
+		nw, err := io.Copy(w, io.Reader(rc))
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
 			type CloseWriter interface {
 				CloseWrite() error
@@ -178,12 +244,12 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 				closer.CloseWrite()
 			}
 			r := <-errCh
-			return nr, r.Num, r.Err
+			return r.Num, nw, r.Err
 		}
 		rc.SetWriteDeadline(time.Now())
 		rc.CloseWrite()
 		r := <-errCh
-		return nr, r.Num, err
+		return r.Num, nw, err
 	}(rc, w, errCh)
 
 	return nr, nw, err
@@ -191,7 +257,7 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 
 // HandleUDP is ...
 // [AddrType(1 byte)][Addr(max 256 byte)][Port(2 byte)][Len(2 byte)][0x0d, 0x0a][Data(max 65535 byte)]
-func HandleUDP(r io.Reader, w io.Writer) (int64, int64, error) {
+func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, error) {
 	rc, err := net.ListenUDP("udp", nil)
 	if err != nil {
 		return 0, 0, err
@@ -259,7 +325,7 @@ func HandleUDP(r io.Reader, w io.Writer) (int64, int64, error) {
 		return
 	}(rc, r, errCh)
 
-	nr, nw, err := func(rc *net.UDPConn, w io.Writer, errCh chan Result, timeout time.Duration) (nr, nw int64, err error) {
+	nr, nw, err := func(rc *net.UDPConn, w io.Writer, errCh chan Result, timeout time.Duration) (_, nw int64, err error) {
 		b := make([]byte, 16*1024)
 
 		b[MaxAddrLen+2] = 0x0d
@@ -290,7 +356,7 @@ func HandleUDP(r io.Reader, w io.Writer) (int64, int64, error) {
 					return 1 + net.IPv6len + 2
 				}
 			}(b[:MaxAddrLen], addr.(*net.UDPAddr))
-			nr += 4 + int64(n) + l
+			nw += 4 + int64(n) + l
 
 			if _, ew := w.Write(b[MaxAddrLen-l : MaxAddrLen+4+n]); ew != nil {
 				err = ew
@@ -301,11 +367,11 @@ func HandleUDP(r io.Reader, w io.Writer) (int64, int64, error) {
 
 		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrDeadlineExceeded) {
 			r := <-errCh
-			return nr, r.Num, r.Err
+			return r.Num, nw, r.Err
 		}
 		r := <-errCh
-		return nr, r.Num, err
-	}(rc, w, errCh, time.Minute*10)
+		return r.Num, nw, err
+	}(rc, w, errCh, timeout)
 
 	return nr, nw, err
 }
