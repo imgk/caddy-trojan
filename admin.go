@@ -60,7 +60,8 @@ func (Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 // AddUser is ...
 func (Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 	type User struct {
-		Password string `json:"password"`
+		Password string `json:"password,omitempty"`
+		Key      string `json:"key,omitempty"`
 	}
 	return nil
 }
@@ -68,7 +69,8 @@ func (Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 // DelUser is ...
 func (Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
 	type User struct {
-		Password string `json:"password"`
+		Password string `json:"password,omitempty"`
+		Key      string `json:"key,omitempty"`
 	}
 	return nil
 }
