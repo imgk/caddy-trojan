@@ -40,8 +40,8 @@ func StringToByteSlice(s string) []byte {
 	ptr := (*reflect.StringHeader)(unsafe.Pointer(&s))
 	hdr := &reflect.SliceHeader{
 		Data: ptr.Data,
-		Cap:  ptr.Len,
 		Len:  ptr.Len,
+		Cap:  ptr.Len,
 	}
 	return *(*[]byte)(unsafe.Pointer(hdr))
 }
@@ -89,6 +89,15 @@ func (u *Upstream) Add(s string) error {
 	return nil
 }
 
+// DelKey is ...
+func (u *Upstream) DelKey(k string) error {
+	u.Lock()
+	delete(u.users, fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(k))))
+	delete(u.users, k)
+	u.Unlock()
+	return nil
+}
+
 // Del is ...
 func (u *Upstream) Del(s string) error {
 	u.Lock()
@@ -117,7 +126,15 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 			v = usage{}
 		}
 
-		fn(k, v.up, v.down)
+		k1 := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(k)))
+		u.usage.RLock()
+		v1, ok := u.usage.repo[k1]
+		u.usage.RUnlock()
+		if !ok {
+			v1 = usage{}
+		}
+
+		fn(k, v.up+v1.up, v.down+v1.down)
 	}
 	u.RUnlock()
 }
@@ -131,11 +148,7 @@ func (u *Upstream) Validate(s string) bool {
 }
 
 // Consume is ...
-func (u *Upstream) Consume(s string, enc bool, nr, nw int64) {
-	if enc {
-		b, _ := base64.StdEncoding.DecodeString(s[6:])
-		s = ByteSliceToString(b)
-	}
+func (u *Upstream) Consume(s string, nr, nw int64) {
 	u.usage.Lock()
 	use, ok := u.usage.repo[s]
 	if !ok {

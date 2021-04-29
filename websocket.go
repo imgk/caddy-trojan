@@ -24,11 +24,12 @@ type wsConn struct {
 
 // Read is ...
 func (c *wsConn) Read(b []byte) (int, error) {
-	n, err := c.r.Read(b)
+	n, _ := c.r.Read(b)
 	if n > 0 {
 		return n, nil
 	}
 
+	var err error
 	_, c.r, err = c.Conn.NextReader()
 	if err != nil {
 		if ce := (*websocket.CloseError)(nil); errors.As(err, &ce) {
@@ -37,7 +38,7 @@ func (c *wsConn) Read(b []byte) (int, error) {
 		return 0, err
 	}
 
-	n, err = c.r.Read(b)
+	n, _ = c.r.Read(b)
 	return n, nil
 }
 

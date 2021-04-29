@@ -143,7 +143,7 @@ func (l *Listener) loop() {
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
-			up.Consume(ByteSliceToString(b[:HeaderLen]), false, nr, nw)
+			up.Consume(ByteSliceToString(b[:HeaderLen]), nr, nw)
 		}(conn, l.logger, l.upstream)
 	}
 }

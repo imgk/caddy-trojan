@@ -66,7 +66,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle http2/http3 error: %v", err))
 		}
-		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), true, nr, nw)
+		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), nr, nw)
 		return nil
 	}
 
@@ -94,7 +94,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
-		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), true, nr, nw)
+		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), nr, nw)
 		return nil
 	}
 	return next.ServeHTTP(w, r)
