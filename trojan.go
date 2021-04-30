@@ -27,18 +27,18 @@ func init() {
 
 // ByteSliceToString is ...
 func ByteSliceToString(b []byte) string {
-	ptr := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	hdr := &reflect.StringHeader{
-		Data: ptr.Data,
-		Len:  ptr.Len,
-	}
-	return *(*string)(unsafe.Pointer(hdr))
+	return *(*string)(unsafe.Pointer(&b))
 }
 
 // StringToByteSlice is ...
 func StringToByteSlice(s string) []byte {
+	type SliceHeader struct {
+		Data uintptr
+		Len  int
+		Cap  int
+	}
 	ptr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	hdr := &reflect.SliceHeader{
+	hdr := &SliceHeader{
 		Data: ptr.Data,
 		Len:  ptr.Len,
 		Cap:  ptr.Len,
@@ -64,15 +64,15 @@ type Upstream struct {
 		// repo is ...
 		repo map[string]usage
 	}
-
 	// total usage
 	total usage
 }
 
 // AddKey is ...
 func (u *Upstream) AddKey(k string) error {
+	key := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(StringToByteSlice(k)))
 	u.Lock()
-	u.users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(k)))] = struct{}{}
+	u.users[key] = struct{}{}
 	u.users[k] = struct{}{}
 	u.Unlock()
 	return nil
@@ -80,32 +80,31 @@ func (u *Upstream) AddKey(k string) error {
 
 // Add is ...
 func (u *Upstream) Add(s string) error {
-	u.Lock()
 	b := [HeaderLen]byte{}
 	GenKey(s, b[:])
-	u.users[fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:]))] = struct{}{}
-	u.users[string(b[:])] = struct{}{}
-	u.Unlock()
+	u.AddKey(ByteSliceToString(b[:]))
 	return nil
 }
 
 // DelKey is ...
 func (u *Upstream) DelKey(k string) error {
+	key := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(StringToByteSlice(k)))
 	u.Lock()
-	delete(u.users, fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(k))))
+	delete(u.users, key)
 	delete(u.users, k)
+	u.usage.Lock()
+	delete(u.usage.repo, key)
+	delete(u.usage.repo, k)
+	u.usage.Unlock()
 	u.Unlock()
 	return nil
 }
 
 // Del is ...
 func (u *Upstream) Del(s string) error {
-	u.Lock()
 	b := [HeaderLen]byte{}
 	GenKey(s, b[:])
-	delete(u.users, fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(b[:])))
-	delete(u.users, string(b[:]))
-	u.Unlock()
+	u.DelKey(ByteSliceToString(b[:]))
 	return nil
 }
 

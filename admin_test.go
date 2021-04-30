@@ -64,6 +64,9 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("marshal error: %v", err)
 	}
 
+	buf := [HeaderLen]byte{}
+	GenKey("imgk1234", buf[:])
+
 	req, err := http.NewRequest(http.MethodPost, "/trojan/users/add", bytes.NewReader(b))
 	if err != nil {
 		t.Fatal(err)
@@ -77,8 +80,6 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	buf := [HeaderLen]byte{}
-	GenKey("imgk1234", buf[:])
 	if _, ok := upstream.users[ByteSliceToString(buf[:])]; !ok {
 		t.Errorf("add new user error")
 	}
@@ -91,6 +92,10 @@ func TestAddUserAndDelUser(t *testing.T) {
 	rr = httptest.NewRecorder()
 
 	Admin{}.DelUser(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
 
 	if _, ok := upstream.users[ByteSliceToString(buf[:])]; ok {
 		t.Errorf("del new user error")
