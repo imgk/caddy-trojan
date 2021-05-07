@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 
 	"github.com/gorilla/websocket"
@@ -14,6 +16,9 @@ import (
 
 func init() {
 	caddy.RegisterModule(Handler{})
+	httpcaddyfile.RegisterHandlerDirective("trojan", func(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
+		return &Handler{}, nil
+	})
 }
 
 // Handler implements an HTTP handler that ...
@@ -100,10 +105,16 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 	return next.ServeHTTP(w, r)
 }
 
+// UnmarshalCaddyfile unmarshals Caddyfile tokens into h.
+func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	return nil
+}
+
 // Interface guards
 var (
 	_ caddy.Provisioner           = (*Handler)(nil)
 	_ caddyhttp.MiddlewareHandler = (*Handler)(nil)
+	_ caddyfile.Unmarshaler       = (*Handler)(nil)
 )
 
 // FlushWriter is ...

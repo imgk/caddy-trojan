@@ -10,12 +10,20 @@ import (
 	"os"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 
 	"go.uber.org/zap"
 )
 
 func init() {
 	caddy.RegisterModule(ListenerWrapper{})
+	httpcaddyfile.RegisterDirective("trojan_gfw", func(h httpcaddyfile.Helper) ([]httpcaddyfile.ConfigValue, error) {
+		return []httpcaddyfile.ConfigValue{{
+			Class: "listener_wrapper",
+			Value: &ListenerWrapper{},
+		}}, nil
+	})
 }
 
 // ListenerWrapper implements an TLS wrapper that it accept connections
@@ -51,10 +59,16 @@ func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
 	return ln
 }
 
+// UnmarshalCaddyfile unmarshals Caddyfile tokens into h.
+func (*ListenerWrapper) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	return nil
+}
+
 // Interface guards
 var (
 	_ caddy.Provisioner     = (*ListenerWrapper)(nil)
 	_ caddy.ListenerWrapper = (*ListenerWrapper)(nil)
+	_ caddyfile.Unmarshaler = (*ListenerWrapper)(nil)
 )
 
 // Listener is ...
