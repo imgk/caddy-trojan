@@ -37,24 +37,24 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 
 ```
 {
-  servers  {
-      listener_wrappers {
-      trojan
-    }
-    protocol {
-      allow_h2c
-      experimental_http3  
-    }
-  }
+	servers {
+		listener_wrappers {
+			trojan
+		}
+		protocol {
+			allow_h2c
+			experimental_http3
+		}
+	}
 }
 :443, example.com {
-tls  email@example.com
-route {
-  trojan
-  file_server {
-  root /var/www/html
-  }
-}
+	tls email@example.com
+	route {
+		trojan
+		file_server {
+			root /var/www/html
+		}
+	}
 }
 
 ```
