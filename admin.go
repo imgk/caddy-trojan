@@ -55,8 +55,8 @@ func (Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	users := make([]User, 0, len(upstream.users)/2)
-	upstream.Range(func(k string, up, down int64) {
-		users = append(users, User{Key: k, Up: up, Down: down})
+	upstream.Range(func(key string, up, down int64) {
+		users = append(users, User{Key: key, Up: up, Down: down})
 	})
 
 	w.WriteHeader(http.StatusOK)

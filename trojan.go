@@ -18,9 +18,10 @@ import (
 )
 
 // upstream is a global repository for saving all users
-var upstream = &Upstream{}
+var upstream = (*Upstream)(nil)
 
 func init() {
+	upstream = &Upstream{}
 	upstream.users = make(map[string]struct{})
 	upstream.usage.repo = make(map[string]usage)
 }
@@ -32,13 +33,8 @@ func ByteSliceToString(b []byte) string {
 
 // StringToByteSlice is ...
 func StringToByteSlice(s string) []byte {
-	type SliceHeader struct {
-		Data uintptr
-		Len  int
-		Cap  int
-	}
 	ptr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	hdr := &SliceHeader{
+	hdr := &reflect.SliceHeader{
 		Data: ptr.Data,
 		Len:  ptr.Len,
 		Cap:  ptr.Len,
@@ -70,7 +66,7 @@ type Upstream struct {
 
 // AddKey is ...
 func (u *Upstream) AddKey(k string) error {
-	key := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(StringToByteSlice(k)))
+	key := base64.StdEncoding.EncodeToString(StringToByteSlice(k))
 	u.Lock()
 	u.users[key] = struct{}{}
 	u.users[k] = struct{}{}
@@ -88,15 +84,16 @@ func (u *Upstream) Add(s string) error {
 
 // DelKey is ...
 func (u *Upstream) DelKey(k string) error {
-	key := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString(StringToByteSlice(k)))
+	key := base64.StdEncoding.EncodeToString(StringToByteSlice(k))
 	u.Lock()
 	delete(u.users, key)
 	delete(u.users, k)
+	u.Unlock()
+
 	u.usage.Lock()
 	delete(u.usage.repo, key)
 	delete(u.usage.repo, k)
 	u.usage.Unlock()
-	u.Unlock()
 	return nil
 }
 
@@ -110,7 +107,8 @@ func (u *Upstream) Del(s string) error {
 
 // Range is ...
 func (u *Upstream) Range(fn func(k string, up, down int64)) {
-	const AuthLen = 82
+	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
+	const AuthLen = 76
 
 	u.RLock()
 	for k := range u.users {
@@ -125,7 +123,7 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 			v = usage{}
 		}
 
-		k1 := fmt.Sprintf("Basic %v", base64.StdEncoding.EncodeToString([]byte(k)))
+		k1 := base64.StdEncoding.EncodeToString(StringToByteSlice(k))
 		u.usage.RLock()
 		v1, ok := u.usage.repo[k1]
 		u.usage.RUnlock()
@@ -174,7 +172,7 @@ const (
 
 // GenKey is ...
 func GenKey(s string, key []byte) {
-	hash := sha256.Sum224([]byte(s))
+	hash := sha256.Sum224(StringToByteSlice(s))
 	hex.Encode(key, hash[:])
 }
 

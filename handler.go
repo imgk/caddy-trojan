@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
@@ -51,14 +52,14 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 	// trojan over http2/http3
 	// use CONNECT method, put trojan header as Proxy-Authorization
 	if r.Method == http.MethodConnect {
-		// fmt.Printf("Basic %v", base64.Encode(hex.Encode(sha256.Sum224([]byte("Test1234")))))
-		const AuthLen = 82
+		// base64.StdEncoding.Encode(hex.Encode(sha256.Sum224([]byte("Test1234"))))
+		const AuthLen = 76
 
 		// handle trojan over http2/http3
 		if r.ProtoMajor == 1 {
 			return next.ServeHTTP(w, r)
 		}
-		auth := r.Header.Get("Proxy-Authorization")
+		auth := strings.TrimPrefix(r.Header.Get("Proxy-Authorization"), "Basic ")
 		if len(auth) != AuthLen {
 			return next.ServeHTTP(w, r)
 		}
@@ -71,7 +72,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle http2/http3 error: %v", err))
 		}
-		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), nr, nw)
+		m.upstream.Consume(auth, nr, nw)
 		return nil
 	}
 
@@ -99,7 +100,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
-		m.upstream.Consume(r.Header.Get("Proxy-Authorization"), nr, nw)
+		m.upstream.Consume(ByteSliceToString(b[:HeaderLen]), nr, nw)
 		return nil
 	}
 	return next.ServeHTTP(w, r)
