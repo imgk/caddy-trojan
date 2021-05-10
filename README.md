@@ -21,7 +21,8 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                         {
                             "handle": [
                                 {
-                                    "handler": "trojan"
+                                    "handler": "trojan",
+                                    "users": ["test1234"]
                                 }
                             ]
                         }
@@ -50,7 +51,10 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 :443, example.com {
 	tls email@example.com
 	route {
-		trojan
+		trojan {
+			user test1234
+			user word1234
+		}
 		file_server {
 			root /var/www/html
 		}

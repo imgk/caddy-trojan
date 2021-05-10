@@ -18,12 +18,16 @@ import (
 func init() {
 	caddy.RegisterModule(Handler{})
 	httpcaddyfile.RegisterHandlerDirective("trojan", func(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-		return &Handler{}, nil
+		m := &Handler{}
+		err := m.UnmarshalCaddyfile(h.Dispenser)
+		return m, err
 	})
 }
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
+	Users []string `json:"users,omitempty"`
+
 	// upstream is ...
 	upstream *Upstream
 	// logger is ...
@@ -44,6 +48,9 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 func (m *Handler) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
 	m.upstream = upstream
+	for _, v := range m.Users {
+		m.upstream.Add(v)
+	}
 	return nil
 }
 
@@ -108,6 +115,27 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 
 // UnmarshalCaddyfile unmarshals Caddyfile tokens into h.
 func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	if !d.Next() {
+		return d.ArgErr()
+	}
+	args := d.RemainingArgs()
+	if len(args) > 0 {
+		return d.ArgErr()
+	}
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		subdirective := d.Val()
+		args := d.RemainingArgs()
+		switch subdirective {
+		case "user":
+			if len(args) != 1 {
+				return d.ArgErr()
+			}
+			if len(args[0]) == 0 {
+				return d.Err("empty user are not allowed")
+			}
+			h.Users = append(h.Users, args[0])
+		}
+	}
 	return nil
 }
 
