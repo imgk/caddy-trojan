@@ -5,7 +5,7 @@
 $ xcaddy build --with github.com/imgk/caddy-trojan
 ```
 
-##  Config (Json)
+##  Config (JSON)
 ```jsonc
 {
     "apps": {
@@ -22,7 +22,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                             "handle": [
                                 {
                                     "handler": "trojan",
-                                    "users": ["test1234"]
+                                    "users": ["test1234", "word1234"]
                                 }
                             ]
                         }
@@ -32,7 +32,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
         }
     }
 }
-
 ```
 ##  Config (Caddyfile)
 
@@ -53,14 +52,13 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 	route {
 		trojan {
 			user test1234
-			user word1234
+			user word1234 user1234
 		}
 		file_server {
 			root /var/www/html
 		}
 	}
 }
-
 ```
 
 ## Manage Users

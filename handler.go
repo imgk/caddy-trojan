@@ -127,13 +127,15 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		args := d.RemainingArgs()
 		switch subdirective {
 		case "user":
-			if len(args) != 1 {
+			if len(args) < 1 {
 				return d.ArgErr()
 			}
-			if len(args[0]) == 0 {
-				return d.Err("empty user are not allowed")
+			for _, v := range args {
+				if len(v) == 0 {
+					return d.Err("empty user is not allowed")
+				}
+				h.Users = append(h.Users, v)
 			}
-			h.Users = append(h.Users, args[0])
 		}
 	}
 	return nil
