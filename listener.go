@@ -135,7 +135,11 @@ func (l *Listener) loop() {
 		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
 			b := make([]byte, HeaderLen+2)
 			if _, err := io.ReadFull(c, b); err != nil {
-				lg.Error(fmt.Sprintf("read prefix error: %v", err))
+				if errors.Is(err, io.EOF) {
+					lg.Error(fmt.Sprintf("read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
+				} else {
+					lg.Error(fmt.Sprintf("read prefix error: %v", err))
+				}
 				c.Close()
 				return
 			}

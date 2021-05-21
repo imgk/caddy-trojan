@@ -34,12 +34,16 @@ func ByteSliceToString(b []byte) string {
 // StringToByteSlice is ...
 func StringToByteSlice(s string) []byte {
 	ptr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	hdr := &reflect.SliceHeader{
+	hdr := struct {
+		Data uintptr
+		Len  int
+		Cap  int
+	}{
 		Data: ptr.Data,
 		Len:  ptr.Len,
 		Cap:  ptr.Len,
 	}
-	return *(*[]byte)(unsafe.Pointer(hdr))
+	return *(*[]byte)(unsafe.Pointer(&hdr))
 }
 
 type usage struct {
