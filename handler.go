@@ -73,11 +73,21 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if ok := m.upstream.Validate(auth); !ok {
 			return next.ServeHTTP(w, r)
 		}
-		m.logger.Info(fmt.Sprintf("handle trojan http2/http3 from %v", r.RemoteAddr))
+		switch r.ProtoMajor {
+		case 2:
+			m.logger.Info(fmt.Sprintf("handle trojan http2 from %v", r.RemoteAddr))
+		case 3:
+			m.logger.Info(fmt.Sprintf("handle trojan http3 from %v", r.RemoteAddr))
+		}
 
 		nr, nw, err := Handle(r.Body, &FlushWriter{w: w, f: w.(http.Flusher)})
 		if err != nil {
-			m.logger.Error(fmt.Sprintf("handle http2/http3 error: %v", err))
+			switch r.ProtoMajor {
+			case 2:
+				m.logger.Error(fmt.Sprintf("handle http2 error: %v", err))
+			case 3:
+				m.logger.Error(fmt.Sprintf("handle http3 error: %v", err))
+			}
 		}
 		m.upstream.Consume(auth, nr, nw)
 		return nil
