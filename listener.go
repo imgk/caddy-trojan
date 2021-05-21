@@ -136,7 +136,7 @@ func (l *Listener) loop() {
 			b := make([]byte, HeaderLen+2)
 			if _, err := io.ReadFull(c, b); err != nil {
 				if errors.Is(err, io.EOF) {
-					lg.Error(fmt.Sprintf("read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
+					lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
 				} else {
 					lg.Error(fmt.Sprintf("read prefix error: %v", err))
 				}
