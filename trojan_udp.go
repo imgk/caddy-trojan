@@ -86,7 +86,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		b[MaxAddrLen+3] = 0x0a
 		for {
 			rc.SetReadDeadline(time.Now().Add(timeout))
-			n, addr, er := rc.ReadFrom(b[MaxAddrLen+4:])
+			n, addr, er := rc.ReadFromUDP(b[MaxAddrLen+4:])
 			if er != nil {
 				err = er
 				break
@@ -109,7 +109,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 					bb[offset+1+net.IPv6len], bb[offset+1+net.IPv6len+1] = byte(addr.Port>>8), byte(addr.Port)
 					return 1 + net.IPv6len + 2
 				}
-			}(b[:MaxAddrLen], addr.(*net.UDPAddr))
+			}(b[:MaxAddrLen], addr)
 			nw += 4 + int64(n) + l
 
 			if _, ew := w.Write(b[MaxAddrLen-l : MaxAddrLen+4+n]); ew != nil {

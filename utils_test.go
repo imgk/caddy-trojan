@@ -1,6 +1,9 @@
 package trojan
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestByteSliceToString(t *testing.T) {
 	for _, v := range []string{
@@ -12,21 +15,11 @@ func TestByteSliceToString(t *testing.T) {
 	}
 }
 
-func Equal(x, y []byte) bool {
-	if len(x) != len(y) {
-		return false
-	}
-	if ByteSliceToString(x) != ByteSliceToString(y) {
-		return false
-	}
-	return true
-}
-
 func TestStringToByteSlice(t *testing.T) {
 	for _, v := range []string{
 		"test1234",
 	} {
-		if !Equal([]byte(v), StringToByteSlice(v)) {
+		if !bytes.Equal([]byte(v), StringToByteSlice(v)) {
 			t.Errorf("convert error: %v", v)
 		}
 	}

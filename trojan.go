@@ -33,6 +33,9 @@ func Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 	if _, err := io.ReadFull(r, b[:1]); err != nil {
 		return 0, 0, fmt.Errorf("read command error: %w", err)
 	}
+	if b[0] != CmdConnect && b[0] != CmdAssociate {
+		return 0, 0, errors.New("command error")
+	}
 
 	// read address
 	addr, err := ReadAddrBuffer(r, b[3:])
