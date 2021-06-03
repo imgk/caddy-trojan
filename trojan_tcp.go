@@ -9,9 +9,8 @@ import (
 )
 
 func ioCopy(dst io.Writer, src io.Reader) (written int64, err error) {
-	buf := alloc(16 * 1024)
+	buf := malloc(16 * 1024)
 	defer free(buf)
-
 	for {
 		nr, er := src.Read(buf)
 		if nr > 0 {

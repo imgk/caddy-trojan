@@ -2,7 +2,7 @@
 
 package trojan
 
-func alloc(n int) []byte {
+func malloc(n int) []byte {
 	return make([]byte, n, n)
 }
 

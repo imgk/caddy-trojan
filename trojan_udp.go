@@ -36,7 +36,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		bb := make([]byte, MaxAddrLen)
 		tt := (*net.UDPAddr)(nil)
 
-		b := alloc(16 * 1024)
+		b := malloc(16 * 1024)
 		defer free(b)
 
 		for {
@@ -82,7 +82,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.UDPConn, w io.Writer, errCh chan Result, timeout time.Duration) (_, nw int64, err error) {
-		b := alloc(16 * 1024)
+		b := malloc(16 * 1024)
 		defer free(b)
 
 		b[MaxAddrLen+2] = 0x0d
