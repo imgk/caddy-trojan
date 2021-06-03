@@ -2,7 +2,7 @@
 
 package trojan
 
-// #include<stdlib.h>
+// #include <stdlib.h>
 import "C"
 
 import "unsafe"
