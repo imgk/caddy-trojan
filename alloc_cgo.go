@@ -7,14 +7,14 @@ import "C"
 
 import "unsafe"
 
-type sliceHeader struct {
-	Data uintptr
-	Len  int
-	Cap  int
-}
-
 func alloc(n int) []byte {
-	return *(*[]byte)(unsafe.Pointer(&sliceHeader{
+	type SliceHeader struct {
+		Data uintptr
+		Len  int
+		Cap  int
+	}
+
+	return *(*[]byte)(unsafe.Pointer(&SliceHeader{
 		Data: uintptr(C.malloc(C.ulong(n))),
 		Len:  n,
 		Cap:  n,
