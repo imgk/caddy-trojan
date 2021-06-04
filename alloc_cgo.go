@@ -14,7 +14,7 @@ func malloc(n int) []byte {
 		Cap  int
 	}
 	return *(*[]byte)(unsafe.Pointer(&SliceHeader{
-		Data: uintptr(C.malloc(C.ulong(n))),
+		Data: uintptr(C.malloc(C.size_t(n))),
 		Len:  n,
 		Cap:  n,
 	}))
