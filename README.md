@@ -54,7 +54,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		trojan {
 			user test1234
 			user word1234 user1234
-            websocket
+			websocket
 		}
 		file_server {
 			root /var/www/html
