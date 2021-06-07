@@ -22,7 +22,8 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                             "handle": [
                                 {
                                     "handler": "trojan",
-                                    "users": ["test1234", "word1234"]
+                                    "users": ["test1234", "word1234"],
+                                    "websocket": false,
                                 }
                             ]
                         }
@@ -53,6 +54,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		trojan {
 			user test1234
 			user word1234 user1234
+            websocket
 		}
 		file_server {
 			root /var/www/html

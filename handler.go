@@ -26,7 +26,8 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
-	Users []string `json:"users,omitempty"`
+	Users     []string `json:"users,omitempty"`
+	WebSocket bool     `json:"websocket,omitempty"`
 
 	// upstream is ...
 	upstream *Upstream
@@ -94,7 +95,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 	}
 
 	// handle websocket
-	if websocket.IsWebSocketUpgrade(r) {
+	if m.WebSocket && websocket.IsWebSocketUpgrade(r) {
 		conn, err := m.upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			return err
@@ -146,6 +147,8 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 				h.Users = append(h.Users, v)
 			}
+		case "websocket":
+			h.WebSocket = true
 		}
 	}
 	return nil
