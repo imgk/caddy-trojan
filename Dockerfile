@@ -17,7 +17,9 @@ RUN set -e \
         --with github.com/caddy-dns/gandi \
         --with github.com/hairyhenderson/caddy-teapot-module \
         --with github.com/caddyserver/format-encoder \
-        --with github.com/imgk/caddy-trojan
+        --with github.com/mholt/caddy-webdav \
+        --with github.com/imgk/caddy-trojan \
+        --with github.com/imgk/caddy-pprof
 
 
 FROM alpine:3.13 AS dist
