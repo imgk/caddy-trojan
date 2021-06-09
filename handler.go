@@ -28,6 +28,7 @@ func init() {
 type Handler struct {
 	Users     []string `json:"users,omitempty"`
 	WebSocket bool     `json:"websocket,omitempty"`
+	Connect   bool     `json:"connect_method,omitempty"`
 
 	// upstream is ...
 	upstream *Upstream
@@ -59,7 +60,7 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	// trojan over http2/http3
 	// use CONNECT method, put trojan header as Proxy-Authorization
-	if r.Method == http.MethodConnect {
+	if m.Connect && r.Method == http.MethodConnect {
 		// base64.StdEncoding.Encode(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 		const AuthLen = 76
 
@@ -138,7 +139,15 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				h.Users = append(h.Users, v)
 			}
 		case "websocket":
+			if h.WebSocket {
+				return d.Err("only one websocket is not allowed")
+			}
 			h.WebSocket = true
+		case "connect_method":
+			if h.Connect {
+				return d.Err("only one connect_method is not allowed")
+			}
+			h.Connect = true
 		}
 	}
 	return nil
@@ -157,7 +166,7 @@ type FlushWriter struct {
 	f http.Flusher
 }
 
-// Writer is ...
+// Write is ...
 func (c *FlushWriter) Write(b []byte) (int, error) {
 	n, err := c.w.Write(b)
 	c.f.Flush()
