@@ -6,11 +6,13 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/imgk/caddy-trojan/memory"
 )
 
 func ioCopy(w io.Writer, r io.Reader) (n int64, err error) {
-	buf := malloc(16 * 1024)
-	defer free(buf)
+	buf := memory.Alloc(16 * 1024)
+	defer memory.Free(buf)
 	for {
 		nr, er := r.Read(buf)
 		if nr > 0 {

@@ -1,13 +1,14 @@
 // +build malloc_cgo
 
-package trojan
+package memory
 
 // #include <stdlib.h>
 import "C"
 
 import "unsafe"
 
-func malloc(n int) []byte {
+// Alloc is ...
+func Alloc(n int) []byte {
 	type SliceHeader struct {
 		Data uintptr
 		Len  int
@@ -20,6 +21,7 @@ func malloc(n int) []byte {
 	}))
 }
 
-func free(b []byte) {
+// Free is ...
+func Free(b []byte) {
 	C.free(unsafe.Pointer(&b[0]))
 }

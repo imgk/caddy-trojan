@@ -1,6 +1,6 @@
 // +build !malloc_cgo
 
-package trojan
+package memory
 
 import (
 	"sync"
@@ -14,7 +14,8 @@ var buffer = &sync.Pool{
 	},
 }
 
-func malloc(n int) []byte {
+// Alloc is ...
+func Alloc(n int) []byte {
 	if n > 16*1024 {
 		return make([]byte, n)
 	}
@@ -31,7 +32,8 @@ func malloc(n int) []byte {
 	}))
 }
 
-func free(b []byte) {
+// Free is ...
+func Free(b []byte) {
 	if cap(b) == 16*1024 {
 		buffer.Put(&b[0])
 	}

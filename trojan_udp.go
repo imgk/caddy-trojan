@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/imgk/caddy-trojan/memory"
 	"github.com/imgk/caddy-trojan/socks"
 )
 
@@ -38,8 +39,8 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		bb := make([]byte, socks.MaxAddrLen)
 		tt := (*net.UDPAddr)(nil)
 
-		b := malloc(16 * 1024)
-		defer free(b)
+		b := memory.Alloc(16 * 1024)
+		defer memory.Free(b)
 
 		for {
 			raddr, er := socks.ReadAddrBuffer(r, b)
@@ -84,8 +85,8 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.UDPConn, w io.Writer, errCh chan Result, timeout time.Duration) (_, nw int64, err error) {
-		b := malloc(16 * 1024)
-		defer free(b)
+		b := memory.Alloc(16 * 1024)
+		defer memory.Free(b)
 
 		b[socks.MaxAddrLen+2] = 0x0d
 		b[socks.MaxAddrLen+3] = 0x0a
