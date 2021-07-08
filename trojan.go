@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/imgk/caddy-trojan/socks"
 )
 
 // HeaderLen is ...
@@ -27,7 +29,7 @@ func GenKey(s string, key []byte) {
 
 // Handle is ...
 func Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	b := [1 + MaxAddrLen + 2]byte{}
+	b := [1 + socks.MaxAddrLen + 2]byte{}
 
 	// read command
 	if _, err := io.ReadFull(r, b[:1]); err != nil {
@@ -38,7 +40,7 @@ func Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 	}
 
 	// read address
-	addr, err := ReadAddrBuffer(r, b[3:])
+	addr, err := socks.ReadAddrBuffer(r, b[3:])
 	if err != nil {
 		return 0, 0, fmt.Errorf("read addr error: %w", err)
 	}
@@ -50,7 +52,7 @@ func Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 
 	switch b[0] {
 	case CmdConnect:
-		tgt, err := ResolveTCPAddr(addr)
+		tgt, err := socks.ResolveTCPAddr(addr)
 		if err != nil {
 			return 0, 0, fmt.Errorf("resolve tcp addr error: %w", err)
 		}

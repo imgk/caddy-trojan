@@ -1,4 +1,4 @@
-package trojan
+package socks
 
 import (
 	"errors"

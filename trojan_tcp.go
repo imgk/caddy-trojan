@@ -8,20 +8,20 @@ import (
 	"time"
 )
 
-func ioCopy(dst io.Writer, src io.Reader) (written int64, err error) {
+func ioCopy(w io.Writer, r io.Reader) (n int64, err error) {
 	buf := malloc(16 * 1024)
 	defer free(buf)
 	for {
-		nr, er := src.Read(buf)
+		nr, er := r.Read(buf)
 		if nr > 0 {
-			nw, ew := dst.Write(buf[0:nr])
+			nw, ew := w.Write(buf[0:nr])
 			if nw < 0 || nr < nw {
 				nw = 0
 				if ew == nil {
 					ew = errors.New("invalid write result")
 				}
 			}
-			written += int64(nw)
+			n += int64(nw)
 			if ew != nil {
 				err = ew
 				break
@@ -32,13 +32,13 @@ func ioCopy(dst io.Writer, src io.Reader) (written int64, err error) {
 			}
 		}
 		if er != nil {
-			if er != io.EOF {
+			if !errors.Is(er, io.EOF) {
 				err = er
 			}
 			break
 		}
 	}
-	return written, err
+	return n, err
 }
 
 // HandleTCP is ...
@@ -63,6 +63,7 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 			errCh <- Result{Num: nr, Err: nil}
 			return
 		}
+		rc.CloseWrite()
 		rc.SetReadDeadline(time.Now())
 		errCh <- Result{Num: nr, Err: err}
 	}(rc, r, errCh)
@@ -70,11 +71,10 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 	nr, nw, err := func(rc *net.TCPConn, w io.Writer, errCh chan Result) (int64, int64, error) {
 		nw, err := ioCopy(w, io.Reader(rc))
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
-			type CloseWriter interface {
+			if cw, ok := w.(interface {
 				CloseWrite() error
-			}
-			if closer, ok := w.(CloseWriter); ok {
-				closer.CloseWrite()
+			}); ok {
+				cw.CloseWrite()
 			}
 			r := <-errCh
 			return r.Num, nw, r.Err

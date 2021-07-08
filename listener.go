@@ -193,11 +193,10 @@ func (c *rawConn) CloseWrite() error {
 	if cc, ok := c.Conn.(*net.TCPConn); ok {
 		return cc.CloseWrite()
 	}
-	type CloseWriter interface {
+	if cw, ok := c.Conn.(interface {
 		CloseWrite() error
-	}
-	if closer, ok := c.Conn.(CloseWriter); ok {
-		return closer.CloseWrite()
+	}); ok {
+		return cw.CloseWrite()
 	}
 	return errors.New("not supported")
 }

@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/imgk/caddy-trojan/socks"
 )
 
 // HandleUDP is ...
@@ -33,14 +35,14 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		}()
 
 		// save previous address
-		bb := make([]byte, MaxAddrLen)
+		bb := make([]byte, socks.MaxAddrLen)
 		tt := (*net.UDPAddr)(nil)
 
 		b := malloc(16 * 1024)
 		defer free(b)
 
 		for {
-			raddr, er := ReadAddrBuffer(r, b)
+			raddr, er := socks.ReadAddrBuffer(r, b)
 			if er != nil {
 				err = er
 				break
@@ -49,7 +51,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 			l := len(raddr.Addr)
 
 			if !bytes.Equal(bb, raddr.Addr) {
-				addr, er := ResolveUDPAddr(raddr)
+				addr, er := socks.ResolveUDPAddr(raddr)
 				if er != nil {
 					err = er
 					break
@@ -85,37 +87,37 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		b := malloc(16 * 1024)
 		defer free(b)
 
-		b[MaxAddrLen+2] = 0x0d
-		b[MaxAddrLen+3] = 0x0a
+		b[socks.MaxAddrLen+2] = 0x0d
+		b[socks.MaxAddrLen+3] = 0x0a
 		for {
 			rc.SetReadDeadline(time.Now().Add(timeout))
-			n, addr, er := rc.ReadFromUDP(b[MaxAddrLen+4:])
+			n, addr, er := rc.ReadFromUDP(b[socks.MaxAddrLen+4:])
 			if er != nil {
 				err = er
 				break
 			}
 
-			b[MaxAddrLen] = byte(n >> 8)
-			b[MaxAddrLen+1] = byte(n)
+			b[socks.MaxAddrLen] = byte(n >> 8)
+			b[socks.MaxAddrLen+1] = byte(n)
 
 			l := func(bb []byte, addr *net.UDPAddr) int64 {
 				if ipv4 := addr.IP.To4(); ipv4 != nil {
-					const offset = MaxAddrLen - (1 + net.IPv4len + 2)
-					bb[offset] = AddrTypeIPv4
+					const offset = socks.MaxAddrLen - (1 + net.IPv4len + 2)
+					bb[offset] = socks.AddrTypeIPv4
 					copy(bb[offset+1:], ipv4)
 					bb[offset+1+net.IPv4len], bb[offset+1+net.IPv4len+1] = byte(addr.Port>>8), byte(addr.Port)
 					return 1 + net.IPv4len + 2
 				} else {
-					const offset = MaxAddrLen - (1 + net.IPv6len + 2)
-					bb[offset] = AddrTypeIPv6
+					const offset = socks.MaxAddrLen - (1 + net.IPv6len + 2)
+					bb[offset] = socks.AddrTypeIPv6
 					copy(bb[offset+1:], addr.IP.To16())
 					bb[offset+1+net.IPv6len], bb[offset+1+net.IPv6len+1] = byte(addr.Port>>8), byte(addr.Port)
 					return 1 + net.IPv6len + 2
 				}
-			}(b[:MaxAddrLen], addr)
+			}(b[:socks.MaxAddrLen], addr)
 			nw += 4 + int64(n) + l
 
-			if _, ew := w.Write(b[MaxAddrLen-l : MaxAddrLen+4+n]); ew != nil {
+			if _, ew := w.Write(b[socks.MaxAddrLen-l : socks.MaxAddrLen+4+n]); ew != nil {
 				err = ew
 				break
 			}
