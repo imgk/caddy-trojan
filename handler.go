@@ -13,6 +13,9 @@ import (
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
+
+	"github.com/imgk/caddy-trojan/trojan"
+	"github.com/imgk/caddy-trojan/x"
 )
 
 func init() {
@@ -77,7 +80,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		}
 		m.logger.Info(fmt.Sprintf("handle trojan http%d from %v", r.ProtoMajor, r.RemoteAddr))
 
-		nr, nw, err := Handle(r.Body, &FlushWriter{w: w, f: w.(http.Flusher)})
+		nr, nw, err := trojan.Handle(r.Body, &FlushWriter{w: w, f: w.(http.Flusher)})
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle http%d error: %v", r.ProtoMajor, err))
 		}
@@ -95,21 +98,21 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		c := &wsConn{Conn: conn, r: (*eofReader)(nil)}
 		defer c.Close()
 
-		b := [HeaderLen + 2]byte{}
+		b := [trojan.HeaderLen + 2]byte{}
 		if _, err := io.ReadFull(c, b[:]); err != nil {
 			m.logger.Error(fmt.Sprintf("read trojan header error: %v", err))
 			return nil
 		}
-		if ok := m.upstream.Validate(ByteSliceToString(b[:HeaderLen])); !ok {
+		if ok := m.upstream.Validate(x.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 			return nil
 		}
 		m.logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
 
-		nr, nw, err := Handle(io.Reader(c), io.Writer(c))
+		nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
-		m.upstream.Consume(ByteSliceToString(b[:HeaderLen]), nr, nw)
+		m.upstream.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		return nil
 	}
 	return next.ServeHTTP(w, r)

@@ -14,6 +14,9 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 
 	"go.uber.org/zap"
+
+	"github.com/imgk/caddy-trojan/trojan"
+	"github.com/imgk/caddy-trojan/x"
 )
 
 func init() {
@@ -133,7 +136,7 @@ func (l *Listener) loop() {
 		}
 
 		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
-			b := make([]byte, HeaderLen+2)
+			b := make([]byte, trojan.HeaderLen+2)
 			if _, err := io.ReadFull(c, b); err != nil {
 				if errors.Is(err, io.EOF) {
 					lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
@@ -145,7 +148,7 @@ func (l *Listener) loop() {
 			}
 
 			// check the net.Conn
-			if ok := up.Validate(ByteSliceToString(b[:HeaderLen])); !ok {
+			if ok := up.Validate(x.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 				select {
 				case <-l.closed:
 					c.Close()
@@ -157,11 +160,11 @@ func (l *Listener) loop() {
 			defer c.Close()
 			lg.Info(fmt.Sprintf("handle trojan net.Conn from %v", c.RemoteAddr()))
 
-			nr, nw, err := Handle(io.Reader(c), io.Writer(c))
+			nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
-			up.Consume(ByteSliceToString(b[:HeaderLen]), nr, nw)
+			up.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		}(conn, l.logger, l.upstream)
 	}
 }

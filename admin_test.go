@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/imgk/caddy-trojan/trojan"
+	"github.com/imgk/caddy-trojan/x"
 )
 
 func TestGetUser(t *testing.T) {
@@ -46,9 +49,9 @@ func TestGetUser(t *testing.T) {
 		t.Fatal(errors.New("user length error"))
 	}
 
-	buf := [HeaderLen]byte{}
-	GenKey("test1234", buf[:])
-	if user[0].Key != ByteSliceToString(buf[:]) {
+	buf := [trojan.HeaderLen]byte{}
+	trojan.GenKey("test1234", buf[:])
+	if user[0].Key != x.ByteSliceToString(buf[:]) {
 		t.Fatal(errors.New("key error"))
 	}
 }
@@ -64,8 +67,8 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("marshal error: %v", err)
 	}
 
-	buf := [HeaderLen]byte{}
-	GenKey("imgk1234", buf[:])
+	buf := [trojan.HeaderLen]byte{}
+	trojan.GenKey("imgk1234", buf[:])
 
 	req, err := http.NewRequest(http.MethodPost, "/trojan/users/add", bytes.NewReader(b))
 	if err != nil {
@@ -80,7 +83,7 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if _, ok := upstream.users[ByteSliceToString(buf[:])]; !ok {
+	if _, ok := upstream.users[x.ByteSliceToString(buf[:])]; !ok {
 		t.Errorf("add new user error")
 	}
 
@@ -97,7 +100,7 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if _, ok := upstream.users[ByteSliceToString(buf[:])]; ok {
+	if _, ok := upstream.users[x.ByteSliceToString(buf[:])]; ok {
 		t.Errorf("del new user error")
 	}
 }

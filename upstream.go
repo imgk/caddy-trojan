@@ -4,6 +4,9 @@ import (
 	"encoding/base64"
 	"sync"
 	"sync/atomic"
+
+	"github.com/imgk/caddy-trojan/trojan"
+	"github.com/imgk/caddy-trojan/x"
 )
 
 // upstream is a global repository for saving all users
@@ -41,7 +44,7 @@ func NewUpstream() *Upstream {
 
 // AddKey is ...
 func (u *Upstream) AddKey(k string) error {
-	key := base64.StdEncoding.EncodeToString(StringToByteSlice(k))
+	key := base64.StdEncoding.EncodeToString(x.StringToByteSlice(k))
 	u.Lock()
 	u.users[key] = struct{}{}
 	u.users[k] = struct{}{}
@@ -51,15 +54,15 @@ func (u *Upstream) AddKey(k string) error {
 
 // Add is ...
 func (u *Upstream) Add(s string) error {
-	b := [HeaderLen]byte{}
-	GenKey(s, b[:])
-	u.AddKey(ByteSliceToString(b[:]))
+	b := [trojan.HeaderLen]byte{}
+	trojan.GenKey(s, b[:])
+	u.AddKey(x.ByteSliceToString(b[:]))
 	return nil
 }
 
 // DelKey is ...
 func (u *Upstream) DelKey(k string) error {
-	key := base64.StdEncoding.EncodeToString(StringToByteSlice(k))
+	key := base64.StdEncoding.EncodeToString(x.StringToByteSlice(k))
 	u.Lock()
 	delete(u.users, key)
 	delete(u.users, k)
@@ -74,9 +77,9 @@ func (u *Upstream) DelKey(k string) error {
 
 // Del is ...
 func (u *Upstream) Del(s string) error {
-	b := [HeaderLen]byte{}
-	GenKey(s, b[:])
-	u.DelKey(ByteSliceToString(b[:]))
+	b := [trojan.HeaderLen]byte{}
+	trojan.GenKey(s, b[:])
+	u.DelKey(x.ByteSliceToString(b[:]))
 	return nil
 }
 
@@ -98,7 +101,7 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 			v = usage{}
 		}
 
-		k1 := base64.StdEncoding.EncodeToString(StringToByteSlice(k))
+		k1 := base64.StdEncoding.EncodeToString(x.StringToByteSlice(k))
 		u.usage.RLock()
 		v1, ok := u.usage.repo[k1]
 		u.usage.RUnlock()
