@@ -137,14 +137,25 @@ func (l *Listener) loop() {
 
 		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
 			b := make([]byte, trojan.HeaderLen+2)
-			if _, err := io.ReadFull(c, b); err != nil {
-				if errors.Is(err, io.EOF) {
-					lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
-				} else {
-					lg.Error(fmt.Sprintf("read prefix error: %v", err))
+			for n := 0; n < trojan.HeaderLen+2; n += 1 {
+				if _, err := io.ReadFull(c, b[n:n+1]); err != nil {
+					if errors.Is(err, io.EOF) {
+						lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
+					} else {
+						lg.Error(fmt.Sprintf("read prefix error: %v", err))
+					}
+					c.Close()
+					return
 				}
-				c.Close()
-				return
+				if n > 1 && b[n-1] == 0x0d && b[n] == 0x0a && n < trojan.HeaderLen+1 {
+					select {
+					case <-l.closed:
+						c.Close()
+					default:
+						l.conns <- &rawConn{Conn: c, r: bytes.NewReader(b[:n+1])}
+					}
+					return
+				}
 			}
 
 			// check the net.Conn
