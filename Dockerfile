@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine3.13 AS builder
+FROM golang:1.17-alpine AS builder
 
 RUN set -e \
     && apk upgrade \
@@ -22,7 +22,7 @@ RUN set -e \
         --with github.com/imgk/caddy-pprof
 
 
-FROM alpine:3.13 AS dist
+FROM alpine AS dist
 
 LABEL maintainer="mritd <mritd@linux.com>"
 
