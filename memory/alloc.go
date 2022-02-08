@@ -27,7 +27,8 @@ func Alloc(n int) []byte {
 
 // Free is ...
 func Free(b []byte) {
-	if cap(b) == 16*1024 {
-		buffer.Put(&b[0])
+	if cap(b) > 16*1024 {
+		return
 	}
+	buffer.Put(&b[0])
 }
