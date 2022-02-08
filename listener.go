@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/imgk/caddy-trojan/trojan"
-	"github.com/imgk/caddy-trojan/x"
+	"github.com/imgk/caddy-trojan/utils"
 )
 
 func init() {
@@ -159,7 +159,7 @@ func (l *Listener) loop() {
 			}
 
 			// check the net.Conn
-			if ok := up.Validate(x.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
+			if ok := up.Validate(utils.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 				select {
 				case <-l.closed:
 					c.Close()
@@ -175,7 +175,7 @@ func (l *Listener) loop() {
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
-			up.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
+			up.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		}(conn, l.logger, l.upstream)
 	}
 }

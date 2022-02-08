@@ -9,16 +9,7 @@ import "unsafe"
 
 // Alloc is ...
 func Alloc(n int) []byte {
-	type SliceHeader struct {
-		Data uintptr
-		Len  int
-		Cap  int
-	}
-	return *(*[]byte)(unsafe.Pointer(&SliceHeader{
-		Data: uintptr(C.malloc(C.size_t(n))),
-		Len:  n,
-		Cap:  n,
-	}))
+	return unsafe.Slice((*byte)(unsafe.Pointer(uintptr(C.malloc(C.size_t(n))))), n)
 }
 
 // Free is ...

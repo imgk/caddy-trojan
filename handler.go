@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/imgk/caddy-trojan/trojan"
-	"github.com/imgk/caddy-trojan/x"
+	"github.com/imgk/caddy-trojan/utils"
 )
 
 func init() {
@@ -103,7 +103,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.logger.Error(fmt.Sprintf("read trojan header error: %v", err))
 			return nil
 		}
-		if ok := m.upstream.Validate(x.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
+		if ok := m.upstream.Validate(utils.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 			return nil
 		}
 		m.logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
@@ -112,7 +112,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
-		m.upstream.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
+		m.upstream.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		return nil
 	}
 	return next.ServeHTTP(w, r)

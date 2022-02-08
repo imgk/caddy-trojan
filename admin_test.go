@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/imgk/caddy-trojan/trojan"
-	"github.com/imgk/caddy-trojan/x"
+	"github.com/imgk/caddy-trojan/utils"
 )
 
 func TestGetUser(t *testing.T) {
@@ -51,7 +51,7 @@ func TestGetUser(t *testing.T) {
 
 	buf := [trojan.HeaderLen]byte{}
 	trojan.GenKey("test1234", buf[:])
-	if user[0].Key != x.ByteSliceToString(buf[:]) {
+	if user[0].Key != utils.ByteSliceToString(buf[:]) {
 		t.Fatal(errors.New("key error"))
 	}
 }
@@ -83,7 +83,7 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if _, ok := upstream.users[x.ByteSliceToString(buf[:])]; !ok {
+	if _, ok := upstream.users[utils.ByteSliceToString(buf[:])]; !ok {
 		t.Errorf("add new user error")
 	}
 
@@ -100,7 +100,7 @@ func TestAddUserAndDelUser(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	if _, ok := upstream.users[x.ByteSliceToString(buf[:])]; ok {
+	if _, ok := upstream.users[utils.ByteSliceToString(buf[:])]; ok {
 		t.Errorf("del new user error")
 	}
 }

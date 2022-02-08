@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/imgk/caddy-trojan/socks"
-	"github.com/imgk/caddy-trojan/x"
+	"github.com/imgk/caddy-trojan/utils"
 )
 
 // HeaderLen is ...
@@ -24,7 +24,7 @@ const (
 
 // GenKey is ...
 func GenKey(s string, key []byte) {
-	hash := sha256.Sum224(x.StringToByteSlice(s))
+	hash := sha256.Sum224(utils.StringToByteSlice(s))
 	hex.Encode(key, hash[:])
 }
 
