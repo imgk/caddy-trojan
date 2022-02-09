@@ -26,7 +26,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		Err error
 	}
 
-	errCh := make(chan Result, 1)
+	errCh := make(chan Result, 0)
 	go func(rc *net.UDPConn, r io.Reader, errCh chan Result) (nr int64, err error) {
 		defer func() {
 			if errors.Is(err, io.EOF) || errors.Is(err, os.ErrDeadlineExceeded) {

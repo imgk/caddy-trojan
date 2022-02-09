@@ -57,7 +57,7 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 		Err error
 	}
 
-	errCh := make(chan Result, 1)
+	errCh := make(chan Result, 0)
 	go func(rc *net.TCPConn, r io.Reader, errCh chan Result) {
 		nr, err := ioCopy(io.Writer(rc), r)
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {

@@ -1,9 +1,6 @@
 package utils
 
-import (
-	"reflect"
-	"unsafe"
-)
+import "unsafe"
 
 // ByteSliceToString is ...
 func ByteSliceToString(b []byte) string {
@@ -12,6 +9,9 @@ func ByteSliceToString(b []byte) string {
 
 // StringToByteSlice is ...
 func StringToByteSlice(s string) []byte {
-	ptr := (*reflect.StringHeader)(unsafe.Pointer(&s))
+	ptr := (*struct {
+		Data uintptr
+		Len  int
+	})(unsafe.Pointer(&s))
 	return unsafe.Slice((*byte)(unsafe.Pointer(ptr.Data)), ptr.Len)
 }

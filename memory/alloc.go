@@ -1,3 +1,4 @@
+//go:build !malloc_cgo
 // +build !malloc_cgo
 
 package memory
