@@ -9,9 +9,5 @@ func ByteSliceToString(b []byte) string {
 
 // StringToByteSlice is ...
 func StringToByteSlice(s string) []byte {
-	ptr := (*struct {
-		Data uintptr
-		Len  int
-	})(unsafe.Pointer(&s))
-	return unsafe.Slice((*byte)(unsafe.Pointer(ptr.Data)), ptr.Len)
+	return unsafe.Slice((*byte)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(&s)))), len(s))
 }
