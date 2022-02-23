@@ -32,6 +32,7 @@ type Handler struct {
 	Users     []string `json:"users,omitempty"`
 	WebSocket bool     `json:"websocket,omitempty"`
 	Connect   bool     `json:"connect_method,omitempty"`
+	Verbose   bool     `json:"verbose,omitempty"`
 
 	// upstream is ...
 	upstream *Upstream
@@ -78,7 +79,9 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if ok := m.upstream.Validate(auth); !ok {
 			return next.ServeHTTP(w, r)
 		}
-		m.logger.Info(fmt.Sprintf("handle trojan http%d from %v", r.ProtoMajor, r.RemoteAddr))
+		if m.Verbose {
+			m.logger.Info(fmt.Sprintf("handle trojan http%d from %v", r.ProtoMajor, r.RemoteAddr))
+		}
 
 		nr, nw, err := trojan.Handle(r.Body, &FlushWriter{w: w, f: w.(http.Flusher)})
 		if err != nil {
@@ -106,7 +109,9 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if ok := m.upstream.Validate(utils.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 			return nil
 		}
-		m.logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
+		if m.Verbose {
+			m.logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
+		}
 
 		nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
 		if err != nil {
@@ -151,6 +156,11 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return d.Err("only one connect_method is not allowed")
 			}
 			h.Connect = true
+		case "verbose":
+			if h.Verbose {
+				return d.Err("only one connect_method is not allowed")
+			}
+			h.Verbose = true
 		}
 	}
 	return nil

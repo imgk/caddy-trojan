@@ -76,6 +76,8 @@ var (
 
 // Listener is ...
 type Listener struct {
+	Verbose bool `json:"verbose,omitempty"`
+
 	// Listener is ...
 	net.Listener
 	// upstream is ...
@@ -169,7 +171,9 @@ func (l *Listener) loop() {
 				return
 			}
 			defer c.Close()
-			lg.Info(fmt.Sprintf("handle trojan net.Conn from %v", c.RemoteAddr()))
+			if l.Verbose {
+				lg.Info(fmt.Sprintf("handle trojan net.Conn from %v", c.RemoteAddr()))
+			}
 
 			nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
 			if err != nil {
