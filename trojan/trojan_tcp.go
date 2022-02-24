@@ -10,9 +10,7 @@ import (
 	"github.com/imgk/caddy-trojan/memory"
 )
 
-func ioCopy(w io.Writer, r io.Reader) (n int64, err error) {
-	buf := memory.Alloc(16 * 1024)
-	defer memory.Free(buf)
+func copyBuffer(w io.Writer, r io.Reader, buf []byte) (n int64, err error) {
 	for {
 		nr, er := r.Read(buf)
 		if nr > 0 {
@@ -59,9 +57,13 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 
 	errCh := make(chan Result, 0)
 	go func(rc *net.TCPConn, r io.Reader, errCh chan Result) {
-		nr, err := ioCopy(io.Writer(rc), r)
+		buf := memory.Alloc(16 * 1024)
+		defer memory.Free(buf)
+
+		nr, err := copyBuffer(io.Writer(rc), r, buf)
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
 			rc.CloseWrite()
+			rc.SetReadDeadline(time.Now())
 			errCh <- Result{Num: nr, Err: nil}
 			return
 		}
@@ -71,8 +73,33 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.TCPConn, w io.Writer, errCh chan Result) (int64, int64, error) {
-		nw, err := ioCopy(w, io.Reader(rc))
+		buf := memory.Alloc(16 * 1024)
+		defer memory.Free(buf)
+
+		nw, err := copyBuffer(w, io.Reader(rc), buf)
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
+			select {
+			case r := <-errCh:
+				if r.Err == nil {
+					for {
+						rc.SetReadDeadline(time.Now().Add(time.Minute))
+						n, err := copyBuffer(w, io.Reader(rc), buf)
+						nw += n
+						if n == 0 || !errors.Is(err, os.ErrDeadlineExceeded) {
+							break
+						}
+					}
+					return r.Num, nw, r.Err
+				}
+
+				if cw, ok := w.(interface {
+					CloseWrite() error
+				}); ok {
+					cw.CloseWrite()
+				}
+				return r.Num, nw, r.Err
+			case <-time.After(time.Minute):
+			}
 			if cw, ok := w.(interface {
 				CloseWrite() error
 			}); ok {
