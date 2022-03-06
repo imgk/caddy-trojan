@@ -77,7 +77,16 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 		defer memory.Free(buf)
 
 		nw, err := copyBuffer(w, io.Reader(rc), buf)
-		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
+		if err == nil {
+			if cw, ok := w.(interface {
+				CloseWrite() error
+			}); ok {
+				cw.CloseWrite()
+			}
+			r := <-errCh
+			return r.Num, nw, r.Err
+		}
+		if errors.Is(err, os.ErrDeadlineExceeded) {
 			select {
 			case r := <-errCh:
 				if r.Err == nil {
