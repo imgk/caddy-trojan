@@ -1,4 +1,4 @@
-package trojan
+package websocket
 
 import (
 	"errors"
@@ -16,14 +16,22 @@ func (*eofReader) Read(b []byte) (int, error) {
 	return 0, io.EOF
 }
 
-// wsConn is ...
-type wsConn struct {
+// Conn is ...
+type Conn struct {
 	*websocket.Conn
 	r io.Reader
 }
 
+// NewConn is ...
+func NewConn(c *websocket.Conn) *Conn {
+	return &Conn{
+		Conn: c,
+		r:    (*eofReader)(nil),
+	}
+}
+
 // Read is ...
-func (c *wsConn) Read(b []byte) (int, error) {
+func (c *Conn) Read(b []byte) (int, error) {
 	n, _ := c.r.Read(b)
 	if n > 0 {
 		return n, nil
@@ -43,7 +51,7 @@ func (c *wsConn) Read(b []byte) (int, error) {
 }
 
 // Write is ...
-func (c *wsConn) Write(b []byte) (int, error) {
+func (c *Conn) Write(b []byte) (int, error) {
 	err := c.Conn.WriteMessage(websocket.BinaryMessage, b)
 	if err != nil {
 		if ce := (*websocket.CloseError)(nil); errors.As(err, &ce) {
@@ -55,7 +63,7 @@ func (c *wsConn) Write(b []byte) (int, error) {
 }
 
 // Close is ...
-func (c *wsConn) Close() error {
+func (c *Conn) Close() error {
 	msg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 	c.Conn.WriteControl(websocket.CloseMessage, msg, time.Now().Add(time.Second*5))
 	return c.Conn.Close()

@@ -16,6 +16,7 @@ import (
 
 	"github.com/imgk/caddy-trojan/trojan"
 	"github.com/imgk/caddy-trojan/utils"
+	"github.com/imgk/caddy-trojan/websocketx"
 )
 
 func init() {
@@ -98,7 +99,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			return err
 		}
 
-		c := &wsConn{Conn: conn, r: (*eofReader)(nil)}
+		c := websocketx.NewConn(conn)
 		defer c.Close()
 
 		b := [trojan.HeaderLen + 2]byte{}
