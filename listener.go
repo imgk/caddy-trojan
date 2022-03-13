@@ -35,7 +35,7 @@ func init() {
 // failed.
 type ListenerWrapper struct {
 	// upstream is ...
-	upstream *Upstream
+	upstream Upstream
 	// logger is ...
 	logger *zap.Logger
 }
@@ -51,7 +51,7 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
-	m.upstream = upstream
+	m.upstream = NewUpstream(ctx.Storage())
 	return nil
 }
 
@@ -81,7 +81,7 @@ type Listener struct {
 	// Listener is ...
 	net.Listener
 	// upstream is ...
-	upstream *Upstream
+	upstream Upstream
 	// logging
 	logger *zap.Logger
 	// return *rawConn
@@ -91,7 +91,7 @@ type Listener struct {
 }
 
 // NewListener is ...
-func NewListener(ln net.Listener, up *Upstream, logger *zap.Logger) *Listener {
+func NewListener(ln net.Listener, up Upstream, logger *zap.Logger) *Listener {
 	l := &Listener{
 		Listener: ln,
 		upstream: up,
@@ -137,7 +137,7 @@ func (l *Listener) loop() {
 			continue
 		}
 
-		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
+		go func(c net.Conn, lg *zap.Logger, up Upstream) {
 			b := make([]byte, trojan.HeaderLen+2)
 			for n := 0; n < trojan.HeaderLen+2; n += 1 {
 				if _, err := io.ReadFull(c, b[n:n+1]); err != nil {

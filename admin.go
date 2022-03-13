@@ -14,7 +14,10 @@ func init() {
 }
 
 // Admin is ...
-type Admin struct{}
+type Admin struct {
+	// Upstream is ...
+	Upstream Upstream
+}
 
 // CaddyModule returns the Caddy module information.
 func (Admin) CaddyModule() caddy.ModuleInfo {
@@ -24,8 +27,14 @@ func (Admin) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// Provision is ...
+func (al *Admin) Provision(ctx caddy.Context) error {
+	al.Upstream = NewUpstream(ctx.Storage())
+	return nil
+}
+
 // Routes returns a route for the /trojan/* endpoint.
-func (al Admin) Routes() []caddy.AdminRoute {
+func (al *Admin) Routes() []caddy.AdminRoute {
 	return []caddy.AdminRoute{
 		{
 			Pattern: "/trojan/users",
@@ -43,7 +52,7 @@ func (al Admin) Routes() []caddy.AdminRoute {
 }
 
 // GetUsers is ...
-func (Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
+func (al *Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodGet {
 		return errors.New("get trojan user method error")
 	}
@@ -54,8 +63,8 @@ func (Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 		Down int64  `json:"down"`
 	}
 
-	users := make([]User, 0, len(upstream.users)/2)
-	upstream.Range(func(key string, up, down int64) {
+	users := make([]User, 0)
+	al.Upstream.Range(func(key string, up, down int64) {
 		users = append(users, User{Key: key, Up: up, Down: down})
 	})
 
@@ -65,7 +74,7 @@ func (Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 }
 
 // AddUser is ...
-func (Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
+func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodPost {
 		return errors.New("add trojan user method error")
 	}
@@ -84,13 +93,13 @@ func (Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if user.Key != "" {
-		upstream.AddKey(user.Key)
+		al.Upstream.AddKey(user.Key)
 
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
 	if user.Password != "" {
-		upstream.Add(user.Password)
+		al.Upstream.Add(user.Password)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -98,7 +107,7 @@ func (Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 // DelUser is ...
-func (Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
+func (al *Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodDelete {
 		return errors.New("delete trojan user method error")
 	}
@@ -117,15 +126,18 @@ func (Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if user.Key != "" {
-		upstream.DelKey(user.Key)
+		al.Upstream.DelKey(user.Key)
 
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
 	if user.Password != "" {
-		upstream.Del(user.Password)
+		al.Upstream.Del(user.Password)
 	}
 
 	w.WriteHeader(http.StatusOK)
 	return nil
 }
+
+// Interface guards
+var _ caddy.Provisioner = (*Handler)(nil)

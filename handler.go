@@ -35,7 +35,7 @@ type Handler struct {
 	Verbose   bool     `json:"verbose,omitempty"`
 
 	// upstream is ...
-	upstream *Upstream
+	upstream Upstream
 	// logger is ...
 	logger *zap.Logger
 	// upgrader is ...
@@ -53,7 +53,7 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Handler) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
-	m.upstream = upstream
+	m.upstream = NewUpstream(ctx.Storage())
 	for _, v := range m.Users {
 		m.upstream.Add(v)
 	}

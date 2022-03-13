@@ -1,139 +1,147 @@
 package trojan
 
 import (
+	"context"
 	"encoding/base64"
-	"sync"
-	"sync/atomic"
+	"encoding/json"
+
+	"github.com/caddyserver/certmagic"
 
 	"github.com/imgk/caddy-trojan/trojan"
 	"github.com/imgk/caddy-trojan/utils"
 )
 
-// upstream is a global repository for saving all users
-var upstream = NewUpstream()
-
-type usage struct {
-	up   int64
-	down int64
+// Traffic Usage
+type TrafficUsage struct {
+	// Up is ...
+	Up int64 `json:"up"`
+	// Down is ...
+	Down int64 `json:"down"`
 }
 
 // Upstream is ...
 type Upstream struct {
-	// RWMutex is ...
-	sync.RWMutex
-	// users is ...
-	users map[string]struct{}
-	// users usage
-	usage struct {
-		// RWMutex is ...
-		sync.RWMutex
-		// repo is ...
-		repo map[string]usage
-	}
-	// total usage
-	total usage
+	// Prefix is ...
+	Prefix string
+	// Storage is ...
+	certmagic.Storage
 }
 
 // NewUpstream is ...
-func NewUpstream() *Upstream {
-	up := &Upstream{}
-	up.users = make(map[string]struct{})
-	up.usage.repo = make(map[string]usage)
-	return up
+func NewUpstream(st certmagic.Storage) Upstream {
+	return Upstream{
+		Prefix:  "trojan/",
+		Storage: st,
+	}
 }
 
 // AddKey is ...
-func (u *Upstream) AddKey(k string) error {
-	key := base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
-	u.Lock()
-	u.users[key] = struct{}{}
-	u.users[k] = struct{}{}
-	u.Unlock()
-	return nil
+func (u Upstream) AddKey(k string) error {
+	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	if u.Exists(key) {
+		return nil
+	}
+	traffic := TrafficUsage{
+		Up:   0,
+		Down: 0,
+	}
+	b, err := json.Marshal(&traffic)
+	if err != nil {
+		return err
+	}
+	return u.Store(key, b)
 }
 
 // Add is ...
-func (u *Upstream) Add(s string) error {
+func (u Upstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	u.AddKey(utils.ByteSliceToString(b[:]))
-	return nil
+	return u.AddKey(utils.ByteSliceToString(b[:]))
 }
 
 // DelKey is ...
-func (u *Upstream) DelKey(k string) error {
-	key := base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
-	u.Lock()
-	delete(u.users, key)
-	delete(u.users, k)
-	u.Unlock()
-
-	u.usage.Lock()
-	delete(u.usage.repo, key)
-	delete(u.usage.repo, k)
-	u.usage.Unlock()
-	return nil
+func (u Upstream) DelKey(k string) error {
+	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	if !u.Exists(key) {
+		return nil
+	}
+	return u.Delete(key)
 }
 
 // Del is ...
-func (u *Upstream) Del(s string) error {
+func (u Upstream) Del(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	u.DelKey(utils.ByteSliceToString(b[:]))
-	return nil
+	return u.DelKey(utils.ByteSliceToString(b[:]))
 }
 
 // Range is ...
-func (u *Upstream) Range(fn func(k string, up, down int64)) {
+func (u Upstream) Range(fn func(k string, up, down int64)) {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 
-	u.RLock()
-	for k := range u.users {
-		if len(k) == AuthLen {
+	keys, err := u.List(u.Prefix, false)
+	if err != nil {
+		return
+	}
+
+	traffic := TrafficUsage{}
+	for _, k := range keys {
+		b, err := u.Load(u.Prefix + k)
+		if err != nil {
 			continue
 		}
-
-		u.usage.RLock()
-		v, ok := u.usage.repo[k]
-		u.usage.RUnlock()
-		if !ok {
-			v = usage{}
+		if err := json.Unmarshal(b, &traffic); err != nil {
+			continue
 		}
-
-		k1 := base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
-		u.usage.RLock()
-		v1, ok := u.usage.repo[k1]
-		u.usage.RUnlock()
-		if !ok {
-			v1 = usage{}
-		}
-
-		fn(k, v.up+v1.up, v.down+v1.down)
+		fn(k, traffic.Up, traffic.Down)
 	}
-	u.RUnlock()
+
+	return
 }
 
 // Validate is ...
-func (u *Upstream) Validate(s string) bool {
-	u.RLock()
-	_, ok := u.users[s]
-	u.RUnlock()
-	return ok
+func (u Upstream) Validate(k string) bool {
+	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
+	const AuthLen = 76
+	if len(k) == AuthLen {
+		k = u.Prefix + k
+	} else {
+		k = u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	}
+	return u.Exists(k)
 }
 
 // Consume is ...
-func (u *Upstream) Consume(s string, nr, nw int64) {
-	u.usage.Lock()
-	use, ok := u.usage.repo[s]
-	if !ok {
-		use = usage{}
+func (u Upstream) Consume(k string, nr, nw int64) error {
+	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
+	const AuthLen = 76
+	if len(k) == AuthLen {
+		k = u.Prefix + k
+	} else {
+		k = u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
 	}
-	use.up += nr
-	use.down += nw
-	u.usage.repo[s] = use
-	u.usage.Unlock()
 
-	atomic.AddInt64(&u.total.up, nr)
-	atomic.AddInt64(&u.total.down, nw)
+	u.Lock(context.Background(), k)
+	defer u.Unlock(k)
+
+	b, err := u.Load(k)
+	if err != nil {
+		return err
+	}
+
+	traffic := TrafficUsage{}
+	if err := json.Unmarshal(b, &traffic); err != nil {
+		return err
+	}
+
+	traffic.Up += nr
+	traffic.Down += nw
+
+	b, err = json.Marshal(&traffic)
+	if err != nil {
+		return err
+	}
+
+	return u.Store(k, b)
 }
