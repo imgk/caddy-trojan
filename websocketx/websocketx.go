@@ -1,4 +1,4 @@
-package websocket
+package websocketx
 
 import (
 	"errors"
