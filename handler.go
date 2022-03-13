@@ -53,7 +53,7 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Handler) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
-	m.upstream = NewUpstream(ctx.Storage())
+	m.upstream = NewUpstream(ctx.Storage(), m.logger)
 	for _, v := range m.Users {
 		m.upstream.Add(v)
 	}

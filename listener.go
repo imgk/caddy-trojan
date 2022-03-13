@@ -51,7 +51,7 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	m.logger = ctx.Logger(m)
-	m.upstream = NewUpstream(ctx.Storage())
+	m.upstream = NewUpstream(ctx.Storage(), m.logger)
 	return nil
 }
 

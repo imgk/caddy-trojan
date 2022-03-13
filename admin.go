@@ -29,7 +29,7 @@ func (Admin) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (al *Admin) Provision(ctx caddy.Context) error {
-	al.Upstream = NewUpstream(ctx.Storage())
+	al.Upstream = NewUpstream(ctx.Storage(), ctx.Logger(al))
 	return nil
 }
 
