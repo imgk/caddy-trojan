@@ -1,35 +1,11 @@
-//go:build !malloc_cgo
-// +build !malloc_cgo
-
 package memory
 
-import (
-	"sync"
-	"unsafe"
-)
-
-var buffer = &sync.Pool{
-	New: newByteSlice,
+// Array is ...
+type Array[T any] struct {
+	data []T
 }
 
-func newByteSlice() interface{} {
-	b := make([]byte, 16*1024)
-	return &b[0]
-}
-
-// Alloc is ...
-func Alloc(n int) []byte {
-	if n > 16*1024 {
-		return make([]byte, n)
-	}
-	ptr := buffer.Get().(*byte)
-	return unsafe.Slice(ptr, n)
-}
-
-// Free is ...
-func Free(b []byte) {
-	if cap(b) > 16*1024 {
-		return
-	}
-	buffer.Put(&b[0])
+// Slice is ...
+func (array Array[T]) Slice() []T {
+	return array.data
 }

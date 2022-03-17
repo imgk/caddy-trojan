@@ -9,11 +9,14 @@ import "C"
 import "unsafe"
 
 // Alloc is ...
-func Alloc(n int) []byte {
-	return unsafe.Slice((*byte)(unsafe.Pointer(uintptr(C.malloc(C.size_t(n))))), n)
+func Alloc[T any](_ *T, n int) Array[T] {
+	return Array[T]{data: unsafe.Slice((*T)(unsafe.Pointer(uintptr(C.malloc(C.size_t(n*int(unsafe.Sizeof(func() T {
+		var t T
+		return t
+	}()))))))), n)}
 }
 
 // Free is ...
-func Free(b []byte) {
-	C.free(unsafe.Pointer(&b[0]))
+func Free[T any](arr Array[T]) {
+	C.free(unsafe.Pointer(&arr.data[0]))
 }

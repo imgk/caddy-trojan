@@ -57,6 +57,21 @@ func (addr *Addr) String() string {
 	}
 }
 
+// Len is ...
+func (addr *Addr) Len() int {
+	return len(addr.Addr)
+}
+
+// AppendTo is ...
+func (addr *Addr) AppendTo(b []byte) []byte {
+	return append(b, addr.Addr...)
+}
+
+// ByteSlice is ...
+func (addr *Addr) ByteSlice() []byte {
+	return addr.Addr
+}
+
 // ReadAddr is ....
 func ReadAddr(conn io.Reader) (*Addr, error) {
 	return ReadAddrBuffer(conn, make([]byte, MaxAddrLen))

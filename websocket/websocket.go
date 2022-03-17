@@ -1,12 +1,23 @@
-package websocketx
+package websocket
 
 import (
 	"errors"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+// Upgrader is ...
+type Upgrader struct {
+	websocket.Upgrader
+}
+
+// IsWebSocketUpgrade is ...
+func IsWebSocketUpgrade(r *http.Request) bool {
+	return websocket.IsWebSocketUpgrade(r)
+}
 
 // eofReader is ...
 type eofReader struct{}
@@ -19,26 +30,25 @@ func (*eofReader) Read(b []byte) (int, error) {
 // Conn is ...
 type Conn struct {
 	*websocket.Conn
-	r io.Reader
+	Reader io.Reader
 }
 
 // NewConn is ...
 func NewConn(c *websocket.Conn) *Conn {
 	return &Conn{
-		Conn: c,
-		r:    (*eofReader)(nil),
+		Conn:   c,
+		Reader: (*eofReader)(nil),
 	}
 }
 
 // Read is ...
-func (c *Conn) Read(b []byte) (int, error) {
-	n, _ := c.r.Read(b)
+func (c *Conn) Read(b []byte) (n int, err error) {
+	n, _ = c.Reader.Read(b)
 	if n > 0 {
 		return n, nil
 	}
 
-	var err error
-	_, c.r, err = c.Conn.NextReader()
+	_, c.Reader, err = c.Conn.NextReader()
 	if err != nil {
 		if ce := (*websocket.CloseError)(nil); errors.As(err, &ce) {
 			return 0, io.EOF
@@ -46,7 +56,7 @@ func (c *Conn) Read(b []byte) (int, error) {
 		return 0, err
 	}
 
-	n, _ = c.r.Read(b)
+	n, _ = c.Reader.Read(b)
 	return n, nil
 }
 

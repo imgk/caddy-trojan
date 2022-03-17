@@ -11,12 +11,11 @@ import (
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 
-	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 
 	"github.com/imgk/caddy-trojan/trojan"
 	"github.com/imgk/caddy-trojan/utils"
-	"github.com/imgk/caddy-trojan/websocketx"
+	"github.com/imgk/caddy-trojan/websocket"
 )
 
 func init() {
@@ -84,7 +83,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.logger.Info(fmt.Sprintf("handle trojan http%d from %v", r.ProtoMajor, r.RemoteAddr))
 		}
 
-		nr, nw, err := trojan.Handle(r.Body, &FlushWriter{w: w, f: w.(http.Flusher)})
+		nr, nw, err := trojan.Handle(r.Body, NewFlushWriter(w))
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle http%d error: %v", r.ProtoMajor, err))
 		}
@@ -99,7 +98,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			return err
 		}
 
-		c := websocketx.NewConn(conn)
+		c := websocket.NewConn(conn)
 		defer c.Close()
 
 		b := [trojan.HeaderLen + 2]byte{}
@@ -176,13 +175,21 @@ var (
 
 // FlushWriter is ...
 type FlushWriter struct {
-	w io.Writer
-	f http.Flusher
+	Writer  io.Writer
+	Flusher http.Flusher
+}
+
+// NewFlushWriter is ...
+func NewFlushWriter(w http.ResponseWriter) *FlushWriter {
+	return &FlushWriter{
+		Writer:  w,
+		Flusher: w.(http.Flusher),
+	}
 }
 
 // Write is ...
 func (c *FlushWriter) Write(b []byte) (int, error) {
-	n, err := c.w.Write(b)
-	c.f.Flush()
+	n, err := c.Writer.Write(b)
+	c.Flusher.Flush()
 	return n, err
 }

@@ -1,11 +1,11 @@
 module github.com/imgk/caddy-trojan
 
-go 1.17
+go 1.18
 
 require (
-	github.com/caddyserver/caddy/v2 v2.4.6
+	github.com/caddyserver/caddy/v2 v2.5.0-beta.1.0.20220315220919-4e9fbee1e2ef
 	github.com/caddyserver/certmagic v0.15.4
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	go.uber.org/zap v1.21.0
 )
 
@@ -37,13 +37,19 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
-	github.com/klauspost/compress v1.13.6 // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgconn v1.10.1 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.2.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
+	github.com/jackc/pgtype v1.9.0 // indirect
+	github.com/jackc/pgx/v4 v4.14.0 // indirect
+	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.11 // indirect
 	github.com/libdns/libdns v0.2.1 // indirect
 	github.com/lucas-clemente/quic-go v0.25.0 // indirect
-	github.com/lunixbochs/vtclean v1.0.0 // indirect
-	github.com/manifoldco/promptui v0.8.0 // indirect
+	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/marten-seemann/qpack v0.2.1 // indirect
 	github.com/marten-seemann/qtls-go1-16 v0.1.4 // indirect
 	github.com/marten-seemann/qtls-go1-17 v0.1.0 // indirect
@@ -56,6 +62,7 @@ require (
 	github.com/micromdm/scep/v2 v2.1.0 // indirect
 	github.com/miekg/dns v1.1.47 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
@@ -66,36 +73,36 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
-	github.com/samfoo/ansi v0.0.0-20160124022901-b6bd2ded7189 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.7.0 // indirect
-	github.com/smallstep/certificates v0.17.5-0.20211008195551-04fe3126bebf // indirect
-	github.com/smallstep/cli v0.17.6 // indirect
-	github.com/smallstep/nosql v0.3.8 // indirect
-	github.com/smallstep/truststore v0.9.6 // indirect
+	github.com/smallstep/certificates v0.18.0 // indirect
+	github.com/smallstep/cli v0.18.0 // indirect
+	github.com/smallstep/nosql v0.4.0 // indirect
+	github.com/smallstep/truststore v0.11.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
+	github.com/tailscale/tscert v0.0.0-20220125204807-4509a5fbaf74 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
-	go.step.sm/cli-utils v0.6.0 // indirect
-	go.step.sm/crypto v0.11.0 // indirect
-	go.step.sm/linkedca v0.5.0 // indirect
+	go.step.sm/cli-utils v0.7.0 // indirect
+	go.step.sm/crypto v0.13.0 // indirect
+	go.step.sm/linkedca v0.7.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000 // indirect
-	golang.org/x/mod v0.5.1 // indirect
+	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5 // indirect
+	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.9 // indirect
+	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/genproto v0.0.0-20210719143636-1d5a45f8e492 // indirect
-	google.golang.org/grpc v1.39.0 // indirect
+	google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5 // indirect
+	google.golang.org/grpc v1.44.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	howett.net/plist v0.0.0-20181124034731-591f970eefbb // indirect
+	howett.net/plist v1.0.0 // indirect
 )

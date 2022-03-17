@@ -57,8 +57,10 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 
 	errCh := make(chan Result, 0)
 	go func(rc *net.TCPConn, r io.Reader, errCh chan Result) {
-		buf := memory.Alloc(16 * 1024)
-		defer memory.Free(buf)
+		arr := memory.Alloc((*byte)(nil), 32*1024)
+		defer memory.Free(arr)
+
+		buf := arr.Slice()
 
 		nr, err := copyBuffer(io.Writer(rc), r, buf)
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
@@ -73,8 +75,10 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.TCPConn, w io.Writer, errCh chan Result) (int64, int64, error) {
-		buf := memory.Alloc(16 * 1024)
-		defer memory.Free(buf)
+		arr := memory.Alloc((*byte)(nil), 32*1024)
+		defer memory.Free(arr)
+
+		buf := arr.Slice()
 
 		nw, err := copyBuffer(w, io.Reader(rc), buf)
 		if err == nil {
