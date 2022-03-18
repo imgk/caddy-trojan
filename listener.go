@@ -34,10 +34,10 @@ func init() {
 // and aead cipher defined by go-shadowsocks2, and return a normal page if
 // failed.
 type ListenerWrapper struct {
-	// upstream is ...
-	upstream Upstream
-	// logger is ...
-	logger *zap.Logger
+	// Upstream is ...
+	Upstream *Upstream
+	// Logger is ...
+	Logger *zap.Logger
 }
 
 // CaddyModule returns the Caddy module information.
@@ -50,14 +50,14 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
-	m.logger = ctx.Logger(m)
-	m.upstream = NewUpstream(ctx.Storage(), m.logger)
+	m.Logger = ctx.Logger(m)
+	m.Upstream = NewUpstream(ctx.Storage(), m.Logger)
 	return nil
 }
 
 // WrapListener implements caddy.ListenWrapper
 func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
-	ln := NewListener(l, m.upstream, m.logger)
+	ln := NewListener(l, m.Upstream, m.Logger)
 	go ln.loop()
 	return ln
 }
@@ -80,10 +80,11 @@ type Listener struct {
 
 	// Listener is ...
 	net.Listener
-	// upstream is ...
-	upstream Upstream
-	// logging
-	logger *zap.Logger
+	// Upstream is ...
+	Upstream *Upstream
+	// Logger is ...
+	Logger *zap.Logger
+
 	// return *rawConn
 	conns chan *rawConn
 	// close channel
@@ -91,11 +92,11 @@ type Listener struct {
 }
 
 // NewListener is ...
-func NewListener(ln net.Listener, up Upstream, logger *zap.Logger) *Listener {
+func NewListener(ln net.Listener, up *Upstream, logger *zap.Logger) *Listener {
 	l := &Listener{
 		Listener: ln,
-		upstream: up,
-		logger:   logger,
+		Upstream: up,
+		Logger:   logger,
 		conns:    make(chan *rawConn, 8),
 		closed:   make(chan struct{}),
 	}
@@ -132,12 +133,12 @@ func (l *Listener) loop() {
 			case <-l.closed:
 				return
 			default:
-				l.logger.Error(fmt.Sprintf("accept net.Conn error: %v", err))
+				l.Logger.Error(fmt.Sprintf("accept net.Conn error: %v", err))
 			}
 			continue
 		}
 
-		go func(c net.Conn, lg *zap.Logger, up Upstream) {
+		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
 			b := make([]byte, trojan.HeaderLen+2)
 			for n := 0; n < trojan.HeaderLen+2; n += 1 {
 				if _, err := io.ReadFull(c, b[n:n+1]); err != nil {
@@ -154,7 +155,7 @@ func (l *Listener) loop() {
 					case <-l.closed:
 						c.Close()
 					default:
-						l.conns <- &rawConn{Conn: c, r: bytes.NewReader(b[:n+1])}
+						l.conns <- &rawConn{Conn: c, Reader: bytes.NewReader(b[:n+1])}
 					}
 					return
 				}
@@ -166,7 +167,7 @@ func (l *Listener) loop() {
 				case <-l.closed:
 					c.Close()
 				default:
-					l.conns <- &rawConn{Conn: c, r: bytes.NewReader(b)}
+					l.conns <- &rawConn{Conn: c, Reader: bytes.NewReader(b)}
 				}
 				return
 			}
@@ -180,24 +181,24 @@ func (l *Listener) loop() {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
 			up.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
-		}(conn, l.logger, l.upstream)
+		}(conn, l.Logger, l.Upstream)
 	}
 }
 
 // rawConn is ...
 type rawConn struct {
 	net.Conn
-	r *bytes.Reader
+	Reader *bytes.Reader
 }
 
 // Read is ...
 func (c *rawConn) Read(b []byte) (int, error) {
-	if c.r == nil {
+	if c.Reader == nil {
 		return c.Conn.Read(b)
 	}
-	n, err := c.r.Read(b)
+	n, err := c.Reader.Read(b)
 	if errors.Is(err, io.EOF) {
-		c.r = nil
+		c.Reader = nil
 		return n, nil
 	}
 	return n, err

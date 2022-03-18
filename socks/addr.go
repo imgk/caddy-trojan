@@ -29,7 +29,7 @@ const (
 
 // Addr is ...
 type Addr struct {
-	Addr []byte
+	data []byte
 }
 
 // Network is ...
@@ -39,18 +39,18 @@ func (*Addr) Network() string {
 
 // String is ...
 func (addr *Addr) String() string {
-	switch addr.Addr[0] {
+	switch addr.data[0] {
 	case AddrTypeIPv4:
-		host := net.IP(addr.Addr[1 : 1+net.IPv4len]).String()
-		port := strconv.Itoa(int(addr.Addr[1+net.IPv4len])<<8 | int(addr.Addr[1+net.IPv4len+1]))
+		host := net.IP(addr.data[1 : 1+net.IPv4len]).String()
+		port := strconv.Itoa(int(addr.data[1+net.IPv4len])<<8 | int(addr.data[1+net.IPv4len+1]))
 		return net.JoinHostPort(host, port)
 	case AddrTypeDomain:
-		host := string(addr.Addr[2 : 2+addr.Addr[1]])
-		port := strconv.Itoa(int(addr.Addr[2+addr.Addr[1]])<<8 | int(addr.Addr[2+addr.Addr[1]+1]))
+		host := string(addr.data[2 : 2+addr.data[1]])
+		port := strconv.Itoa(int(addr.data[2+addr.data[1]])<<8 | int(addr.data[2+addr.data[1]+1]))
 		return net.JoinHostPort(host, port)
 	case AddrTypeIPv6:
-		host := net.IP(addr.Addr[1 : 1+net.IPv6len]).String()
-		port := strconv.Itoa(int(addr.Addr[1+net.IPv6len])<<8 | int(addr.Addr[1+net.IPv6len+1]))
+		host := net.IP(addr.data[1 : 1+net.IPv6len]).String()
+		port := strconv.Itoa(int(addr.data[1+net.IPv6len])<<8 | int(addr.data[1+net.IPv6len+1]))
 		return net.JoinHostPort(host, port)
 	default:
 		return ""
@@ -59,17 +59,17 @@ func (addr *Addr) String() string {
 
 // Len is ...
 func (addr *Addr) Len() int {
-	return len(addr.Addr)
+	return len(addr.data)
 }
 
 // AppendTo is ...
 func (addr *Addr) AppendTo(b []byte) []byte {
-	return append(b, addr.Addr...)
+	return append(b, addr.data...)
 }
 
 // ByteSlice is ...
 func (addr *Addr) ByteSlice() []byte {
-	return addr.Addr
+	return addr.data
 }
 
 // ReadAddr is ....
@@ -92,7 +92,7 @@ func ReadAddrBuffer(conn io.Reader, addr []byte) (*Addr, error) {
 			return nil, err
 		}
 
-		return &Addr{Addr: addr[:n]}, nil
+		return &Addr{data: addr[:n]}, nil
 	case AddrTypeDomain:
 		n := 1 + 1 + int(addr[1]) + 2
 		_, err := io.ReadFull(conn, addr[2:n])
@@ -100,7 +100,7 @@ func ReadAddrBuffer(conn io.Reader, addr []byte) (*Addr, error) {
 			return nil, err
 		}
 
-		return &Addr{Addr: addr[:n]}, nil
+		return &Addr{data: addr[:n]}, nil
 	case AddrTypeIPv6:
 		n := 1 + net.IPv6len + 2
 		_, err := io.ReadFull(conn, addr[2:n])
@@ -108,7 +108,7 @@ func ReadAddrBuffer(conn io.Reader, addr []byte) (*Addr, error) {
 			return nil, err
 		}
 
-		return &Addr{Addr: addr[:n]}, nil
+		return &Addr{data: addr[:n]}, nil
 	default:
 		return nil, ErrInvalidAddrType
 	}
@@ -127,21 +127,21 @@ func ParseAddr(addr []byte) (*Addr, error) {
 			return nil, ErrInvalidAddrLen
 		}
 
-		return &Addr{Addr: addr[:n]}, nil
+		return &Addr{data: addr[:n]}, nil
 	case AddrTypeDomain:
 		n := 1 + 1 + int(addr[1]) + 2
 		if len(addr) < n {
 			return nil, ErrInvalidAddrLen
 		}
 
-		return &Addr{Addr: addr[:n]}, nil
+		return &Addr{data: addr[:n]}, nil
 	case AddrTypeIPv6:
 		n := 1 + net.IPv6len + 2
 		if len(addr) < n {
 			return nil, ErrInvalidAddrLen
 		}
 
-		return &Addr{Addr: addr[:n]}, nil
+		return &Addr{data: addr[:n]}, nil
 	default:
 		return nil, ErrInvalidAddrType
 	}
@@ -149,37 +149,37 @@ func ParseAddr(addr []byte) (*Addr, error) {
 
 // ResolveTCPAddr is ...
 func ResolveTCPAddr(addr *Addr) (*net.TCPAddr, error) {
-	switch addr.Addr[0] {
+	switch addr.data[0] {
 	case AddrTypeIPv4:
-		host := net.IP(addr.Addr[1 : 1+net.IPv4len])
-		port := int(addr.Addr[1+net.IPv4len])<<8 | int(addr.Addr[1+net.IPv4len+1])
+		host := net.IP(addr.data[1 : 1+net.IPv4len])
+		port := int(addr.data[1+net.IPv4len])<<8 | int(addr.data[1+net.IPv4len+1])
 		return &net.TCPAddr{IP: host, Port: port}, nil
 	case AddrTypeDomain:
 		return net.ResolveTCPAddr("tcp", addr.String())
 	case AddrTypeIPv6:
-		host := net.IP(addr.Addr[1 : 1+net.IPv6len])
-		port := int(addr.Addr[1+net.IPv6len])<<8 | int(addr.Addr[1+net.IPv6len+1])
+		host := net.IP(addr.data[1 : 1+net.IPv6len])
+		port := int(addr.data[1+net.IPv6len])<<8 | int(addr.data[1+net.IPv6len+1])
 		return &net.TCPAddr{IP: host, Port: port}, nil
 	default:
-		return nil, fmt.Errorf("address type (%v) error", addr.Addr[0])
+		return nil, fmt.Errorf("address type (%v) error", addr.data[0])
 	}
 }
 
 // ResolveUDPAddr is ...
 func ResolveUDPAddr(addr *Addr) (*net.UDPAddr, error) {
-	switch addr.Addr[0] {
+	switch addr.data[0] {
 	case AddrTypeIPv4:
-		host := net.IP(addr.Addr[1 : 1+net.IPv4len])
-		port := int(addr.Addr[1+net.IPv4len])<<8 | int(addr.Addr[1+net.IPv4len+1])
+		host := net.IP(addr.data[1 : 1+net.IPv4len])
+		port := int(addr.data[1+net.IPv4len])<<8 | int(addr.data[1+net.IPv4len+1])
 		return &net.UDPAddr{IP: host, Port: port}, nil
 	case AddrTypeDomain:
 		return net.ResolveUDPAddr("udp", addr.String())
 	case AddrTypeIPv6:
-		host := net.IP(addr.Addr[1 : 1+net.IPv6len])
-		port := int(addr.Addr[1+net.IPv6len])<<8 | int(addr.Addr[1+net.IPv6len+1])
+		host := net.IP(addr.data[1 : 1+net.IPv6len])
+		port := int(addr.data[1+net.IPv6len])<<8 | int(addr.data[1+net.IPv6len+1])
 		return &net.UDPAddr{IP: host, Port: port}, nil
 	default:
-		return nil, fmt.Errorf("address type (%v) error", addr.Addr[0])
+		return nil, fmt.Errorf("address type (%v) error", addr.data[0])
 	}
 }
 
@@ -200,7 +200,7 @@ func ResolveAddrBuffer(addr net.Addr, b []byte) (*Addr, error) {
 			b[1+net.IPv4len] = byte(nAddr.Port >> 8)
 			b[1+net.IPv4len+1] = byte(nAddr.Port)
 
-			return &Addr{Addr: b[:1+net.IPv4len+2]}, nil
+			return &Addr{data: b[:1+net.IPv4len+2]}, nil
 		}
 		ipv6 := nAddr.IP.To16()
 
@@ -209,7 +209,7 @@ func ResolveAddrBuffer(addr net.Addr, b []byte) (*Addr, error) {
 		b[1+net.IPv6len] = byte(nAddr.Port >> 8)
 		b[1+net.IPv6len+1] = byte(nAddr.Port)
 
-		return &Addr{Addr: b[:1+net.IPv6len+2]}, nil
+		return &Addr{data: b[:1+net.IPv6len+2]}, nil
 	}
 
 	if nAddr, ok := addr.(*net.UDPAddr); ok {
@@ -219,7 +219,7 @@ func ResolveAddrBuffer(addr net.Addr, b []byte) (*Addr, error) {
 			b[1+net.IPv4len] = byte(nAddr.Port >> 8)
 			b[1+net.IPv4len+1] = byte(nAddr.Port)
 
-			return &Addr{Addr: b[:1+net.IPv4len+2]}, nil
+			return &Addr{data: b[:1+net.IPv4len+2]}, nil
 		}
 		ipv6 := nAddr.IP.To16()
 
@@ -228,12 +228,12 @@ func ResolveAddrBuffer(addr net.Addr, b []byte) (*Addr, error) {
 		b[1+net.IPv6len] = byte(nAddr.Port >> 8)
 		b[1+net.IPv6len+1] = byte(nAddr.Port)
 
-		return &Addr{Addr: b[:1+net.IPv6len+2]}, nil
+		return &Addr{data: b[:1+net.IPv6len+2]}, nil
 	}
 
 	if nAddr, ok := addr.(*Addr); ok {
-		copy(b, nAddr.Addr)
-		return &Addr{Addr: b[:len(nAddr.Addr)]}, nil
+		copy(b, nAddr.data)
+		return &Addr{data: b[:len(nAddr.data)]}, nil
 	}
 
 	return nil, ErrInvalidAddrType

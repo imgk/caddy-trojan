@@ -32,8 +32,8 @@ type Upstream struct {
 }
 
 // NewUpstream is ...
-func NewUpstream(st certmagic.Storage, lg *zap.Logger) Upstream {
-	return Upstream{
+func NewUpstream(st certmagic.Storage, lg *zap.Logger) *Upstream {
+	return &Upstream{
 		Prefix:  "trojan/",
 		Storage: st,
 		Logger:  lg,
@@ -41,7 +41,7 @@ func NewUpstream(st certmagic.Storage, lg *zap.Logger) Upstream {
 }
 
 // AddKey is ...
-func (u Upstream) AddKey(k string) error {
+func (u *Upstream) AddKey(k string) error {
 	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
 	if u.Storage.Exists(key) {
 		return nil
@@ -58,14 +58,14 @@ func (u Upstream) AddKey(k string) error {
 }
 
 // Add is ...
-func (u Upstream) Add(s string) error {
+func (u *Upstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
 	return u.AddKey(utils.ByteSliceToString(b[:]))
 }
 
 // DelKey is ...
-func (u Upstream) DelKey(k string) error {
+func (u *Upstream) DelKey(k string) error {
 	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
 	if !u.Storage.Exists(key) {
 		return nil
@@ -74,14 +74,14 @@ func (u Upstream) DelKey(k string) error {
 }
 
 // Del is ...
-func (u Upstream) Del(s string) error {
+func (u *Upstream) Del(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
 	return u.DelKey(utils.ByteSliceToString(b[:]))
 }
 
 // Range is ...
-func (u Upstream) Range(fn func(k string, up, down int64)) {
+func (u *Upstream) Range(fn func(k string, up, down int64)) {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 
@@ -108,7 +108,7 @@ func (u Upstream) Range(fn func(k string, up, down int64)) {
 }
 
 // Validate is ...
-func (u Upstream) Validate(k string) bool {
+func (u *Upstream) Validate(k string) bool {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 	if len(k) == AuthLen {
@@ -120,7 +120,7 @@ func (u Upstream) Validate(k string) bool {
 }
 
 // Consume is ...
-func (u Upstream) Consume(k string, nr, nw int64) error {
+func (u *Upstream) Consume(k string, nr, nw int64) error {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 	if len(k) == AuthLen {

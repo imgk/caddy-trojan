@@ -6,6 +6,6 @@ type Array[T any] struct {
 }
 
 // Slice is ...
-func (array Array[T]) Slice() []T {
-	return array.data
+func (arr *Array[T]) Slice() []T {
+	return arr.data
 }

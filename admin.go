@@ -16,7 +16,7 @@ func init() {
 // Admin is ...
 type Admin struct {
 	// Upstream is ...
-	Upstream Upstream
+	Upstream *Upstream
 }
 
 // CaddyModule returns the Caddy module information.
