@@ -9,3 +9,8 @@ type Array[T any] struct {
 func (arr *Array[T]) Slice() []T {
 	return arr.data
 }
+
+// Len is ...
+func (arr *Array[T]) Len() int {
+	return len(arr.data)
+}
