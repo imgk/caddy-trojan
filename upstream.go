@@ -92,7 +92,7 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 
 	traffic := TrafficUsage{}
 	for _, k := range keys {
-		b, err := u.Storage.Load(u.Prefix + k)
+		b, err := u.Storage.Load(k)
 		if err != nil {
 			u.Logger.Error(fmt.Sprintf("load user error: %v", err))
 			continue
