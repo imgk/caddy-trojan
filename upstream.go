@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/caddyserver/certmagic"
 	"go.uber.org/zap"
@@ -13,8 +14,8 @@ import (
 	"github.com/imgk/caddy-trojan/utils"
 )
 
-// TrafficUsage is ...
-type TrafficUsage struct {
+// Traffic is ...
+type Traffic struct {
 	// Up is ...
 	Up int64 `json:"up"`
 	// Down is ...
@@ -46,7 +47,7 @@ func (u *Upstream) AddKey(k string) error {
 	if u.Storage.Exists(key) {
 		return nil
 	}
-	traffic := TrafficUsage{
+	traffic := Traffic{
 		Up:   0,
 		Down: 0,
 	}
@@ -90,7 +91,7 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 		return
 	}
 
-	traffic := TrafficUsage{}
+	traffic := Traffic{}
 	for _, k := range keys {
 		b, err := u.Storage.Load(k)
 		if err != nil {
@@ -101,7 +102,7 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 			u.Logger.Error(fmt.Sprintf("load user error: %v", err))
 			continue
 		}
-		fn(k, traffic.Up, traffic.Down)
+		fn(strings.TrimPrefix(k, u.Prefix), traffic.Up, traffic.Down)
 	}
 
 	return
@@ -137,7 +138,7 @@ func (u *Upstream) Consume(k string, nr, nw int64) error {
 		return err
 	}
 
-	traffic := TrafficUsage{}
+	traffic := Traffic{}
 	if err := json.Unmarshal(b, &traffic); err != nil {
 		return err
 	}

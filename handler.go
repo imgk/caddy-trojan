@@ -35,11 +35,11 @@ type Handler struct {
 	Verbose   bool     `json:"verbose,omitempty"`
 
 	// Upstream is ...
-	Upstream *Upstream
+	Upstream *Upstream `json:"-,omitempty"`
 	// Logger is ...
-	Logger *zap.Logger
+	Logger *zap.Logger `json:"-,omitempty"`
 	// Upgrader is ...
-	Upgrader websocket.Upgrader
+	Upgrader websocket.Upgrader `json:"-,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -158,7 +158,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			h.Connect = true
 		case "verbose":
 			if h.Verbose {
-				return d.Err("only one connect_method is not allowed")
+				return d.Err("only one verbose is not allowed")
 			}
 			h.Verbose = true
 		}

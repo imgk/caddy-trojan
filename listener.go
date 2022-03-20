@@ -35,9 +35,9 @@ func init() {
 // failed.
 type ListenerWrapper struct {
 	// Upstream is ...
-	Upstream *Upstream
+	Upstream *Upstream `json:"-,omitempty"`
 	// Logger is ...
-	Logger *zap.Logger
+	Logger *zap.Logger `json:"-,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.

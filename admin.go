@@ -140,4 +140,4 @@ func (al *Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 // Interface guards
-var _ caddy.Provisioner = (*Handler)(nil)
+var _ caddy.Provisioner = (*Admin)(nil)
