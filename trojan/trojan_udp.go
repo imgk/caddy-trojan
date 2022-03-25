@@ -39,7 +39,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 		bb := make([]byte, socks.MaxAddrLen)
 		tt := (*net.UDPAddr)(nil)
 
-		arr := memory.Alloc((*byte)(nil), 64*1024+socks.MaxAddrLen)
+		arr := memory.Alloc[byte](64*1024+socks.MaxAddrLen)
 		defer memory.Free(arr)
 
 		b := arr.Slice()
@@ -87,7 +87,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration) (int64, int64, e
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.UDPConn, w io.Writer, errCh chan Result, timeout time.Duration) (_, nw int64, err error) {
-		arr := memory.Alloc((*byte)(nil), 64*1024+socks.MaxAddrLen+4)
+		arr := memory.Alloc[byte](64*1024+socks.MaxAddrLen+4)
 		defer memory.Free(arr)
 
 		b := arr.Slice()

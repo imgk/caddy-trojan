@@ -4,7 +4,7 @@
 package memory
 
 // Alloc is ...
-func Alloc[T any](_ *T, n int) Array[T] {
+func Alloc[T any](n int) Array[T] {
 	return Array[T]{data: make([]T, n)}
 }
 
