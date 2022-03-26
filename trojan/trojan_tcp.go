@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/imgk/caddy-trojan/memory"
+	"github.com/imgk/memory-go"
 )
 
 func copyBuffer(w io.Writer, r io.Reader, buf []byte) (n int64, err error) {
@@ -57,10 +57,8 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 
 	errCh := make(chan Result, 0)
 	go func(rc *net.TCPConn, r io.Reader, errCh chan Result) {
-		arr := memory.Alloc[byte](32*1024)
-		defer memory.Free(arr)
-
-		buf := arr.Slice()
+		ptr, buf := memory.Alloc[byte](32*1024)
+		defer memory.Free(ptr)
 
 		nr, err := copyBuffer(io.Writer(rc), r, buf)
 		if err == nil || errors.Is(err, os.ErrDeadlineExceeded) {
@@ -75,10 +73,8 @@ func HandleTCP(r io.Reader, w io.Writer, addr *net.TCPAddr) (int64, int64, error
 	}(rc, r, errCh)
 
 	nr, nw, err := func(rc *net.TCPConn, w io.Writer, errCh chan Result) (int64, int64, error) {
-		arr := memory.Alloc[byte](32*1024)
-		defer memory.Free(arr)
-
-		buf := arr.Slice()
+		ptr, buf := memory.Alloc[byte](32*1024)
+		defer memory.Free(ptr)
 
 		nw, err := copyBuffer(w, io.Reader(rc), buf)
 		if err == nil {

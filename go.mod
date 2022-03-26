@@ -6,6 +6,7 @@ require (
 	github.com/caddyserver/caddy/v2 v2.5.0-beta.1.0.20220315220919-4e9fbee1e2ef
 	github.com/caddyserver/certmagic v0.15.4
 	github.com/gorilla/websocket v1.5.0
+	github.com/imgk/memory-go v0.0.0-20220326235356-cfa0440d1c01
 	go.uber.org/zap v1.21.0
 )
 
