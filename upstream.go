@@ -44,7 +44,7 @@ func NewUpstream(st certmagic.Storage, lg *zap.Logger) *Upstream {
 // AddKey is ...
 func (u *Upstream) AddKey(k string) error {
 	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
-	if u.Storage.Exists(key) {
+	if u.Storage.Exists(context.Background(), key) {
 		return nil
 	}
 	traffic := Traffic{
@@ -55,7 +55,7 @@ func (u *Upstream) AddKey(k string) error {
 	if err != nil {
 		return err
 	}
-	return u.Storage.Store(key, b)
+	return u.Storage.Store(context.Background(), key, b)
 }
 
 // Add is ...
@@ -68,10 +68,10 @@ func (u *Upstream) Add(s string) error {
 // DelKey is ...
 func (u *Upstream) DelKey(k string) error {
 	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
-	if !u.Storage.Exists(key) {
+	if !u.Storage.Exists(context.Background(), key) {
 		return nil
 	}
-	return u.Storage.Delete(key)
+	return u.Storage.Delete(context.Background(), key)
 }
 
 // Del is ...
@@ -86,14 +86,14 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 
-	keys, err := u.Storage.List(u.Prefix, false)
+	keys, err := u.Storage.List(context.Background(), u.Prefix, false)
 	if err != nil {
 		return
 	}
 
 	traffic := Traffic{}
 	for _, k := range keys {
-		b, err := u.Storage.Load(k)
+		b, err := u.Storage.Load(context.Background(), k)
 		if err != nil {
 			u.Logger.Error(fmt.Sprintf("load user error: %v", err))
 			continue
@@ -117,7 +117,7 @@ func (u *Upstream) Validate(k string) bool {
 	} else {
 		k = u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
 	}
-	return u.Storage.Exists(k)
+	return u.Storage.Exists(context.Background(), k)
 }
 
 // Consume is ...
@@ -131,9 +131,9 @@ func (u *Upstream) Consume(k string, nr, nw int64) error {
 	}
 
 	u.Storage.Lock(context.Background(), k)
-	defer u.Storage.Unlock(k)
+	defer u.Storage.Unlock(context.Background(), k)
 
-	b, err := u.Storage.Load(k)
+	b, err := u.Storage.Load(context.Background(), k)
 	if err != nil {
 		return err
 	}
@@ -151,5 +151,5 @@ func (u *Upstream) Consume(k string, nr, nw int64) error {
 		return err
 	}
 
-	return u.Storage.Store(k, b)
+	return u.Storage.Store(context.Background(), k, b)
 }
