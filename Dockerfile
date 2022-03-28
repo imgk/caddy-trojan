@@ -1,13 +1,12 @@
-FROM golang:1.17-alpine AS builder
+FROM golang:1.18-alpine AS builder
 
 RUN set -e \
     && apk upgrade \
     && apk add jq curl git \
     && export version=$(curl -s "https://api.github.com/repos/caddyserver/caddy/releases/latest" | jq -r .tag_name) \
     && echo ">>>>>>>>>>>>>>> ${version} ###############" \
-    && go get -u github.com/caddyserver/xcaddy/cmd/xcaddy \
+    && go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest \
     && xcaddy build ${version} --output /caddy \
-        --with github.com/caddy-dns/googleclouddns \
         --with github.com/caddy-dns/route53 \
         --with github.com/caddy-dns/cloudflare \
         --with github.com/caddy-dns/alidns \
@@ -16,7 +15,7 @@ RUN set -e \
         --with github.com/caddy-dns/duckdns \
         --with github.com/caddy-dns/gandi \
         --with github.com/hairyhenderson/caddy-teapot-module \
-        --with github.com/caddyserver/format-encoder \
+        --with github.com/caddyserver/transform-encoder \
         --with github.com/mholt/caddy-webdav \
         --with github.com/imgk/caddy-trojan \
         --with github.com/imgk/caddy-pprof
