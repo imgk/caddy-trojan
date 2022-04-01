@@ -37,6 +37,6 @@ func RewindConn(conn net.Conn, read []byte) net.Conn {
 		}
 		return tlsConn
 	} else {
-		return &rawConn{conn, bytes.NewReader(read)}
+		return NewRawConn(conn, read)
 	}
 }
