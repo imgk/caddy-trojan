@@ -1,15 +1,13 @@
 package trojan
 
 import (
-	"bytes"
-	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/caddyserver/caddy/v2"
 	"io"
 	"net"
 	"os"
 
-	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 
@@ -86,7 +84,7 @@ type Listener struct {
 	Logger *zap.Logger
 
 	// return *rawConn
-	conns chan *rawConn
+	conns chan net.Conn
 	// close channel
 	closed chan struct{}
 }
@@ -97,7 +95,7 @@ func NewListener(ln net.Listener, up *Upstream, logger *zap.Logger) *Listener {
 		Listener: ln,
 		Upstream: up,
 		Logger:   logger,
-		conns:    make(chan *rawConn, 8),
+		conns:    make(chan net.Conn, 8),
 		closed:   make(chan struct{}),
 	}
 	return l
@@ -155,7 +153,7 @@ func (l *Listener) loop() {
 					case <-l.closed:
 						c.Close()
 					default:
-						l.conns <- &rawConn{Conn: c, Reader: bytes.NewReader(b[:n+1])}
+						l.conns <- utils.RewindConn(c, b[:n+1])
 					}
 					return
 				}
@@ -167,7 +165,7 @@ func (l *Listener) loop() {
 				case <-l.closed:
 					c.Close()
 				default:
-					l.conns <- &rawConn{Conn: c, Reader: bytes.NewReader(b)}
+					l.conns <- utils.RewindConn(c, b)
 				}
 				return
 			}
@@ -183,39 +181,4 @@ func (l *Listener) loop() {
 			up.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		}(conn, l.Logger, l.Upstream)
 	}
-}
-
-// rawConn is ...
-type rawConn struct {
-	net.Conn
-	Reader *bytes.Reader
-}
-
-// Read is ...
-func (c *rawConn) Read(b []byte) (int, error) {
-	if c.Reader == nil {
-		return c.Conn.Read(b)
-	}
-	n, err := c.Reader.Read(b)
-	if errors.Is(err, io.EOF) {
-		c.Reader = nil
-		return n, nil
-	}
-	return n, err
-}
-
-// CloseWrite is ...
-func (c *rawConn) CloseWrite() error {
-	if cc, ok := c.Conn.(*tls.Conn); ok {
-		return cc.CloseWrite()
-	}
-	if cc, ok := c.Conn.(*net.TCPConn); ok {
-		return cc.CloseWrite()
-	}
-	if cw, ok := c.Conn.(interface {
-		CloseWrite() error
-	}); ok {
-		return cw.CloseWrite()
-	}
-	return errors.New("not supported")
 }
