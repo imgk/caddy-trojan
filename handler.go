@@ -2,6 +2,7 @@ package trojan
 
 import (
 	"fmt"
+	"github.com/imgk/caddy-trojan/grpc"
 	"io"
 	"net/http"
 	"strings"
@@ -31,6 +32,7 @@ func init() {
 type Handler struct {
 	Users     []string `json:"users,omitempty"`
 	WebSocket bool     `json:"websocket,omitempty"`
+	GRPC      bool     `json:"grpc,omitempty"`
 	Connect   bool     `json:"connect_method,omitempty"`
 	Verbose   bool     `json:"verbose,omitempty"`
 
@@ -120,6 +122,30 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		m.Upstream.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		return nil
 	}
+	// handle grpc
+	if m.GRPC && grpc.IsGRPC(w, r) {
+		c := grpc.NewConn(r, w)
+		defer c.Close()
+
+		b := [trojan.HeaderLen + 2]byte{}
+		if _, err := io.ReadFull(c, b[:]); err != nil {
+			m.Logger.Error(fmt.Sprintf("read trojan header error: %v", err))
+			return nil
+		}
+		if ok := m.Upstream.Validate(utils.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
+			return nil
+		}
+		if m.Verbose {
+			m.Logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
+		}
+
+		nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
+		if err != nil {
+			m.Logger.Error(fmt.Sprintf("handle websocket error: %v", err))
+		}
+		m.Upstream.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
+		return nil
+	}
 	return next.ServeHTTP(w, r)
 }
 
@@ -151,6 +177,11 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return d.Err("only one websocket is not allowed")
 			}
 			h.WebSocket = true
+		case "grpc":
+			if h.GRPC {
+				return d.Err("only one grpc is not allowed")
+			}
+			h.GRPC = true
 		case "connect_method":
 			if h.Connect {
 				return d.Err("only one connect_method is not allowed")
