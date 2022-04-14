@@ -59,6 +59,12 @@ func (EnvProxy) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
+// Provision is ...
+func (p *EnvProxy) Provision(ctx caddy.Context) error {
+	p.Dialer = proxy.FromEnvironment()
+	return nil
+}
+
 // Handle is ...
 func (p *EnvProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 	return trojan.HandleWithDialer(r, w, p)
@@ -75,6 +81,7 @@ func (*EnvProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 }
 
 var (
-	_ Proxy = (*NoProxy)(nil)
-	_ Proxy = (*EnvProxy)(nil)
+	_ Proxy             = (*NoProxy)(nil)
+	_ caddy.Provisioner = (*EnvProxy)(nil)
+	_ Proxy             = (*EnvProxy)(nil)
 )
