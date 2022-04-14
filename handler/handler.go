@@ -143,18 +143,7 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	}
 	for nesting := d.Nesting(); d.NextBlock(nesting); {
 		subdirective := d.Val()
-		args := d.RemainingArgs()
 		switch subdirective {
-		case "user":
-			if len(args) < 1 {
-				return d.ArgErr()
-			}
-			for _, v := range args {
-				if len(v) == 0 {
-					return d.Err("empty user is not allowed")
-				}
-				h.Users = append(h.Users, v)
-			}
 		case "websocket":
 			if h.WebSocket {
 				return d.Err("only one websocket is not allowed")
