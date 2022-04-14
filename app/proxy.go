@@ -48,7 +48,7 @@ func (*NoProxy) Close() error {
 
 // EnvProxy is ...
 type EnvProxy struct {
-	proxy.Dialer
+	proxy.Dialer `json:"-,omitempty"`
 }
 
 // CaddyModule is ...
