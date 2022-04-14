@@ -14,6 +14,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(NoProxy{})
+	caddy.RegisterModule(EnvProxy{})
 }
 
 // Proxy is ...
