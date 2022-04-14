@@ -31,9 +31,9 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
-	WebSocket bool     `json:"websocket,omitempty"`
-	Connect   bool     `json:"connect_method,omitempty"`
-	Verbose   bool     `json:"verbose,omitempty"`
+	WebSocket bool `json:"websocket,omitempty"`
+	Connect   bool `json:"connect_method,omitempty"`
+	Verbose   bool `json:"verbose,omitempty"`
 
 	// Upstream is ...
 	Upstream app.Upstream `json:"-,omitempty"`
