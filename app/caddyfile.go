@@ -12,12 +12,8 @@ func init() {
 
 /*
 trojan {
-	upstream {
-		upstream caddy
-	}
-	proxy {
-		proxy no_proxy | env_proxy
-	}
+	caddy
+	no_proxy | env_proxy
 	users pass1234 word5678
 }
 */
