@@ -1,4 +1,4 @@
-package trojan
+package app
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/certmagic"
 	"go.uber.org/zap"
 
@@ -14,16 +15,30 @@ import (
 	"github.com/imgk/caddy-trojan/utils"
 )
 
-// Traffic is ...
-type Traffic struct {
-	// Up is ...
-	Up int64 `json:"up"`
-	// Down is ...
-	Down int64 `json:"down"`
+func init() {
+	caddy.RegisterModule(CaddyUpstream{})
 }
 
 // Upstream is ...
-type Upstream struct {
+type Upstream interface {
+	// Add is ...
+	Add(string) error
+	// AddKey is ...
+	AddKey(string) error
+	// Del is ...
+	Del(string) error
+	// DelKey is ...
+	DelKey(string) error
+	// Range is ...
+	Range(func(string, int64, int64))
+	// Validate is ...
+	Validate(string) bool
+	// Consume is ...
+	Consume(string, int64, int64) error
+}
+
+// CaddyUpstream is ...
+type CaddyUpstream struct {
 	// Prefix is ...
 	Prefix string
 	// Storage is ...
@@ -32,17 +47,24 @@ type Upstream struct {
 	Logger *zap.Logger
 }
 
-// NewUpstream is ...
-func NewUpstream(st certmagic.Storage, lg *zap.Logger) *Upstream {
-	return &Upstream{
-		Prefix:  "trojan/",
-		Storage: st,
-		Logger:  lg,
+// CaddyModule is ...
+func (CaddyUpstream) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "trojan.upstreams.caddy",
+		New: func() caddy.Module { return new(CaddyUpstream) },
 	}
 }
 
+// Provision is ...
+func (u *CaddyUpstream) Provision(ctx caddy.Context) error {
+	u.Prefix = "trojan/"
+	u.Storage = ctx.Storage()
+	u.Logger = ctx.Logger(u)
+	return nil
+}
+
 // AddKey is ...
-func (u *Upstream) AddKey(k string) error {
+func (u *CaddyUpstream) AddKey(k string) error {
 	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
 	if u.Storage.Exists(context.Background(), key) {
 		return nil
@@ -59,14 +81,14 @@ func (u *Upstream) AddKey(k string) error {
 }
 
 // Add is ...
-func (u *Upstream) Add(s string) error {
+func (u *CaddyUpstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
 	return u.AddKey(utils.ByteSliceToString(b[:]))
 }
 
 // DelKey is ...
-func (u *Upstream) DelKey(k string) error {
+func (u *CaddyUpstream) DelKey(k string) error {
 	key := u.Prefix + base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
 	if !u.Storage.Exists(context.Background(), key) {
 		return nil
@@ -75,14 +97,14 @@ func (u *Upstream) DelKey(k string) error {
 }
 
 // Del is ...
-func (u *Upstream) Del(s string) error {
+func (u *CaddyUpstream) Del(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
 	return u.DelKey(utils.ByteSliceToString(b[:]))
 }
 
 // Range is ...
-func (u *Upstream) Range(fn func(k string, up, down int64)) {
+func (u *CaddyUpstream) Range(fn func(k string, up, down int64)) {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 
@@ -109,7 +131,7 @@ func (u *Upstream) Range(fn func(k string, up, down int64)) {
 }
 
 // Validate is ...
-func (u *Upstream) Validate(k string) bool {
+func (u *CaddyUpstream) Validate(k string) bool {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 	if len(k) == AuthLen {
@@ -121,7 +143,7 @@ func (u *Upstream) Validate(k string) bool {
 }
 
 // Consume is ...
-func (u *Upstream) Consume(k string, nr, nw int64) error {
+func (u *CaddyUpstream) Consume(k string, nr, nw int64) error {
 	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
 	const AuthLen = 76
 	if len(k) == AuthLen {
@@ -153,3 +175,5 @@ func (u *Upstream) Consume(k string, nr, nw int64) error {
 
 	return u.Storage.Store(context.Background(), k, b)
 }
+
+var _ Upstream = (*CaddyUpstream)(nil)

@@ -1,4 +1,4 @@
-package trojan
+package admin
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"github.com/caddyserver/caddy/v2"
+
+	"github.com/imgk/caddy-trojan/app"
 )
 
 func init() {
@@ -16,7 +18,7 @@ func init() {
 // Admin is ...
 type Admin struct {
 	// Upstream is ...
-	Upstream *Upstream
+	Upstream app.Upstream
 }
 
 // CaddyModule returns the Caddy module information.
@@ -29,7 +31,15 @@ func (Admin) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (al *Admin) Provision(ctx caddy.Context) error {
-	al.Upstream = NewUpstream(ctx.Storage(), ctx.Logger(al))
+	if !ctx.AppIsConfigured(app.CaddyAppID) {
+		return errors.New("trojan is not configured")
+	}
+	mod, err := ctx.App(app.CaddyAppID)
+	if err != nil {
+		return err
+	}
+	app := mod.(*app.App)
+	al.Upstream = app.Upstream()
 	return nil
 }
 
@@ -140,4 +150,7 @@ func (al *Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 // Interface guards
-var _ caddy.Provisioner = (*Admin)(nil)
+var (
+	_ caddy.AdminRouter = (*Admin)(nil)
+	_ caddy.Provisioner = (*Admin)(nil)
+)

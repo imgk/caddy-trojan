@@ -15,7 +15,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                     "listener_wrappers": [{
                         "wrapper": "trojan"
                     }],
-                    // set true to enable http2
                     "allow_h2c": true,
                     "routes": [
                         {
@@ -23,7 +22,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                                 {
                                     "handler": "trojan",
                                     "users": ["test1234", "word1234"],
-				    "connect_method": false,
+                                    "connect_method": false,
                                     "websocket": false
                                 }
                             ]
@@ -31,6 +30,15 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                     ]
                 }
             }
+        },
+        "trojan":{
+            "upstream": {
+                "upstream": "caddy"
+            },
+            "proxy": {
+                "proxy": "no_proxy"
+            },
+            "users": ["pass1234", "word5678"],
         }
     }
 }

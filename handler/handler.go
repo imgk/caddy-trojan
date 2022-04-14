@@ -1,6 +1,7 @@
-package trojan
+package handler
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/imgk/caddy-trojan/app"
 	"github.com/imgk/caddy-trojan/trojan"
 	"github.com/imgk/caddy-trojan/utils"
 	"github.com/imgk/caddy-trojan/websocket"
@@ -35,7 +37,9 @@ type Handler struct {
 	Verbose   bool     `json:"verbose,omitempty"`
 
 	// Upstream is ...
-	Upstream *Upstream `json:"-,omitempty"`
+	Upstream app.Upstream `json:"-,omitempty"`
+	// Proxy is ...
+	Proxy app.Proxy `json:"-,omitempty"`
 	// Logger is ...
 	Logger *zap.Logger `json:"-,omitempty"`
 	// Upgrader is ...
@@ -53,7 +57,16 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Handler) Provision(ctx caddy.Context) error {
 	m.Logger = ctx.Logger(m)
-	m.Upstream = NewUpstream(ctx.Storage(), m.Logger)
+	if !ctx.AppIsConfigured(app.CaddyAppID) {
+		return errors.New("trojan is not configured")
+	}
+	mod, err := ctx.App(app.CaddyAppID)
+	if err != nil {
+		return err
+	}
+	app := mod.(*app.App)
+	m.Upstream = app.Upstream()
+	m.Proxy = app.Proxy()
 	for _, v := range m.Users {
 		m.Upstream.Add(v)
 	}
@@ -83,7 +96,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.Logger.Info(fmt.Sprintf("handle trojan http%d from %v", r.ProtoMajor, r.RemoteAddr))
 		}
 
-		nr, nw, err := trojan.Handle(r.Body, NewFlushWriter(w))
+		nr, nw, err := m.Proxy.Handle(r.Body, NewFlushWriter(w))
 		if err != nil {
 			m.Logger.Error(fmt.Sprintf("handle http%d error: %v", r.ProtoMajor, err))
 		}
@@ -113,7 +126,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.Logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
 		}
 
-		nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
+		nr, nw, err := m.Proxy.Handle(io.Reader(c), io.Writer(c))
 		if err != nil {
 			m.Logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}

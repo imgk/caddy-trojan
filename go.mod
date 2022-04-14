@@ -3,19 +3,21 @@ module github.com/imgk/caddy-trojan
 go 1.18
 
 require (
-	github.com/caddyserver/caddy/v2 v2.5.0-beta.1.0.20220325185629-b4f1a713978f
+	github.com/caddyserver/caddy/v2 v2.5.0-rc.1.0.20220413201103-0d13173071dc
 	github.com/caddyserver/certmagic v0.16.0
 	github.com/gorilla/websocket v1.5.0
-	github.com/imgk/memory-go v0.0.0-20220326235356-cfa0440d1c01
+	github.com/imgk/memory-go v0.0.0-20220328012817-37cdd311f1a3
 	go.uber.org/zap v1.21.0
 )
 
 require (
+	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.2 // indirect
 	github.com/antlr/antlr4 v0.0.0-20200503195918-621b933c7a7f // indirect
+	github.com/aryann/difflib v0.0.0-20210328193216-ff5ff6dc229b // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
@@ -76,8 +78,9 @@ require (
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.7.0 // indirect
-	github.com/smallstep/certificates v0.18.0 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/slackhq/nebula v1.5.2 // indirect
+	github.com/smallstep/certificates v0.18.3-0.20220329212333-b42c1dfe64cf // indirect
 	github.com/smallstep/cli v0.18.0 // indirect
 	github.com/smallstep/nosql v0.4.0 // indirect
 	github.com/smallstep/truststore v0.11.0 // indirect
@@ -88,8 +91,8 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.step.sm/cli-utils v0.7.0 // indirect
-	go.step.sm/crypto v0.13.0 // indirect
-	go.step.sm/linkedca v0.7.0 // indirect
+	go.step.sm/crypto v0.15.3 // indirect
+	go.step.sm/linkedca v0.11.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064 // indirect
@@ -97,10 +100,10 @@ require (
 	golang.org/x/net v0.0.0-20220325170049-de3da57026de // indirect
 	golang.org/x/sys v0.0.0-20220325203850-36772127a21f // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.3.8-0.20211004125949-5bd84dd9b33b // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/genproto v0.0.0-20220118154757-00ab72f36ad5 // indirect
+	google.golang.org/genproto v0.0.0-20220222213610-43724f9ea8cf // indirect
 	google.golang.org/grpc v1.44.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect

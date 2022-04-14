@@ -1,18 +1,19 @@
-package trojan
+package listener
 
 import (
 	"errors"
 	"fmt"
-	"github.com/caddyserver/caddy/v2"
 	"io"
 	"net"
 	"os"
 
+	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 
 	"go.uber.org/zap"
 
+	"github.com/imgk/caddy-trojan/app"
 	"github.com/imgk/caddy-trojan/trojan"
 	"github.com/imgk/caddy-trojan/utils"
 )
@@ -33,7 +34,9 @@ func init() {
 // failed.
 type ListenerWrapper struct {
 	// Upstream is ...
-	Upstream *Upstream `json:"-,omitempty"`
+	Upstream app.Upstream `json:"-,omitempty"`
+	// Proxy is ...
+	Proxy app.Proxy `json:"-,omitempty"`
 	// Logger is ...
 	Logger *zap.Logger `json:"-,omitempty"`
 }
@@ -49,13 +52,22 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	m.Logger = ctx.Logger(m)
-	m.Upstream = NewUpstream(ctx.Storage(), m.Logger)
+	if !ctx.AppIsConfigured(app.CaddyAppID) {
+		return errors.New("trojan is not configured")
+	}
+	mod, err := ctx.App(app.CaddyAppID)
+	if err != nil {
+		return err
+	}
+	app := mod.(*app.App)
+	m.Upstream = app.Upstream()
+	m.Proxy = app.Proxy()
 	return nil
 }
 
 // WrapListener implements caddy.ListenWrapper
 func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
-	ln := NewListener(l, m.Upstream, m.Logger)
+	ln := NewListener(l, m.Upstream, m.Proxy, m.Logger)
 	go ln.loop()
 	return ln
 }
@@ -79,7 +91,9 @@ type Listener struct {
 	// Listener is ...
 	net.Listener
 	// Upstream is ...
-	Upstream *Upstream
+	Upstream app.Upstream
+	// Proxy is ...
+	Proxy app.Proxy
 	// Logger is ...
 	Logger *zap.Logger
 
@@ -90,10 +104,11 @@ type Listener struct {
 }
 
 // NewListener is ...
-func NewListener(ln net.Listener, up *Upstream, logger *zap.Logger) *Listener {
+func NewListener(ln net.Listener, up app.Upstream, px app.Proxy, logger *zap.Logger) *Listener {
 	l := &Listener{
 		Listener: ln,
 		Upstream: up,
+		Proxy:    px,
 		Logger:   logger,
 		conns:    make(chan net.Conn, 8),
 		closed:   make(chan struct{}),
@@ -136,7 +151,7 @@ func (l *Listener) loop() {
 			continue
 		}
 
-		go func(c net.Conn, lg *zap.Logger, up *Upstream) {
+		go func(c net.Conn, lg *zap.Logger, up app.Upstream) {
 			b := make([]byte, trojan.HeaderLen+2)
 			for n := 0; n < trojan.HeaderLen+2; n += 1 {
 				if _, err := io.ReadFull(c, b[n:n+1]); err != nil {
@@ -174,7 +189,7 @@ func (l *Listener) loop() {
 				lg.Info(fmt.Sprintf("handle trojan net.Conn from %v", c.RemoteAddr()))
 			}
 
-			nr, nw, err := trojan.Handle(io.Reader(c), io.Writer(c))
+			nr, nw, err := l.Proxy.Handle(io.Reader(c), io.Writer(c))
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
