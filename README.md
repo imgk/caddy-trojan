@@ -21,7 +21,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                             "handle": [
                                 {
                                     "handler": "trojan",
-                                    "users": ["test1234", "word1234"],
                                     "connect_method": false,
                                     "websocket": false
                                 }

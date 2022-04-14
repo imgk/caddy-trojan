@@ -31,7 +31,6 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
-	Users     []string `json:"users,omitempty"`
 	WebSocket bool     `json:"websocket,omitempty"`
 	Connect   bool     `json:"connect_method,omitempty"`
 	Verbose   bool     `json:"verbose,omitempty"`
@@ -67,9 +66,6 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	app := mod.(*app.App)
 	m.Upstream = app.Upstream()
 	m.Proxy = app.Proxy()
-	for _, v := range m.Users {
-		m.Upstream.Add(v)
-	}
 	return nil
 }
 
