@@ -67,9 +67,14 @@ func (addr *Addr) AppendTo(b []byte) []byte {
 	return append(b, addr.data...)
 }
 
-// ByteSlice is ...
-func (addr *Addr) ByteSlice() []byte {
+// Bytes is ...
+func (addr *Addr) Bytes() []byte {
 	return addr.data
+}
+
+// Append is ...
+func (addr *Addr) Append(b []byte) []byte {
+	return append(addr.data, b...)
 }
 
 // ReadAddr is ....

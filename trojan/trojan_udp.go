@@ -54,7 +54,7 @@ func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration, d Dialer) (int64
 
 			l := raddr.Len()
 
-			if !bytes.Equal(bb, raddr.ByteSlice()) {
+			if !bytes.Equal(bb, raddr.Bytes()) {
 				addr, er := socks.ResolveUDPAddr(raddr)
 				if er != nil {
 					err = er
