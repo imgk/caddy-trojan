@@ -16,7 +16,7 @@ import (
 // HandleUDP is ...
 // [AddrType(1 byte)][Addr(max 256 byte)][Port(2 byte)][Len(2 byte)][0x0d, 0x0a][Data(max 65535 byte)]
 func HandleUDP(r io.Reader, w io.Writer, timeout time.Duration, d Dialer) (int64, int64, error) {
-	rc, err := net.ListenPacket("udp", "")
+	rc, err := d.ListenPacket("udp", "")
 	if err != nil {
 		return 0, 0, err
 	}
