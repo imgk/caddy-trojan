@@ -55,11 +55,11 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 			experimental_http3
 		}
 	}
-    trojan {
-        caddy
-        no_proxy
-        users word1234 test5678
-    }
+	trojan {
+		caddy
+		no_proxy
+		users word1234 test5678
+	}
 }
 
 :443, example.com {
