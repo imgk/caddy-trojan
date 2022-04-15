@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/certmagic"
@@ -17,6 +18,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(CaddyUpstream{})
+	caddy.RegisterModule(MemoryUpstream{})
 }
 
 // Upstream is ...
@@ -35,6 +37,93 @@ type Upstream interface {
 	Validate(string) bool
 	// Consume is ...
 	Consume(string, int64, int64) error
+}
+
+// MemoryUpstream is ...
+type MemoryUpstream struct {
+	mu sync.RWMutex
+	mm map[string]Traffic
+}
+
+// CaddyModule is ...
+func (MemoryUpstream) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "trojan.upstreams.memory",
+		New: func() caddy.Module { return new(MemoryUpstream) },
+	}
+}
+
+// AddKey is ...
+func (u *MemoryUpstream) AddKey(k string) error {
+	key := base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	u.mu.Lock()
+	u.mm[key] = Traffic{
+		Up:   0,
+		Down: 0,
+	}
+	u.mu.Unlock()
+	return nil
+}
+
+// Add is ...
+func (u *MemoryUpstream) Add(s string) error {
+	b := [trojan.HeaderLen]byte{}
+	trojan.GenKey(s, b[:])
+	return u.AddKey(utils.ByteSliceToString(b[:]))
+}
+
+// DelKey is ...
+func (u *MemoryUpstream) DelKey(k string) error {
+	key := base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	u.mu.Lock()
+	delete(u.mm, key)
+	u.mu.Unlock()
+	return nil
+}
+
+// Del is ...
+func (u *MemoryUpstream) Del(s string) error {
+	b := [trojan.HeaderLen]byte{}
+	trojan.GenKey(s, b[:])
+	return u.DelKey(utils.ByteSliceToString(b[:]))
+}
+
+// Range is ...
+func (u *MemoryUpstream) Range(fn func(string, int64, int64)) {
+	u.mu.RLock()
+	for k, v := range u.mm {
+		fn(k, v.Up, v.Down)
+	}
+	u.mu.RUnlock()
+}
+
+// Validate is ...
+func (u *MemoryUpstream) Validate(k string) bool {
+	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
+	const AuthLen = 76
+	if len(k) != AuthLen {
+		k = base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	}
+	u.mu.RLock()
+	_, ok := u.mm[k]
+	u.mu.RUnlock()
+	return ok
+}
+
+// Consume is ...
+func (u *MemoryUpstream) Consume(k string, nr, nw int64) error {
+	// base64.StdEncoding.EncodeToString(hex.Encode(sha256.Sum224([]byte("Test1234"))))
+	const AuthLen = 76
+	if len(k) != AuthLen {
+		k = base64.StdEncoding.EncodeToString(utils.StringToByteSlice(k))
+	}
+	u.mu.Lock()
+	traffic := u.mm[k]
+	traffic.Up += nr
+	traffic.Down += nw
+	u.mm[k] = traffic
+	u.mu.Unlock()
+	return nil
 }
 
 // CaddyUpstream is ...
@@ -176,4 +265,7 @@ func (u *CaddyUpstream) Consume(k string, nr, nw int64) error {
 	return u.Storage.Store(context.Background(), k, b)
 }
 
-var _ Upstream = (*CaddyUpstream)(nil)
+var (
+	_ Upstream = (*CaddyUpstream)(nil)
+	_ Upstream = (*MemoryUpstream)(nil)
+)

@@ -28,7 +28,15 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 		for d.NextBlock(0) {
 			switch d.Val() {
 			case "caddy":
+				if app.UpstreamRaw != nil {
+					return nil, d.Err("only one upstream is allowed")
+				}
 				app.UpstreamRaw = caddyconfig.JSONModuleObject(new(CaddyUpstream), "upstream", "caddy", nil)
+			case "memory":
+				if app.UpstreamRaw != nil {
+					return nil, d.Err("only one upstream is allowed")
+				}
+				app.UpstreamRaw = caddyconfig.JSONModuleObject(new(MemoryUpstream), "upstream", "memory", nil)
 			case "env_proxy":
 				if app.ProxyRaw != nil {
 					return nil, d.Err("only one proxy is allowed")
