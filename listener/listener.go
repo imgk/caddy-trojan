@@ -147,7 +147,8 @@ func (l *Listener) loop() {
 		go func(c net.Conn, lg *zap.Logger, up app.Upstream) {
 			b := make([]byte, trojan.HeaderLen+2)
 			for n := 0; n < trojan.HeaderLen+2; n += 1 {
-				if _, err := io.ReadFull(c, b[n:n+1]); err != nil {
+				nr, err := c.Read(b[n : n+1])
+				if err != nil {
 					if errors.Is(err, io.EOF) {
 						lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
 					} else {
@@ -156,7 +157,11 @@ func (l *Listener) loop() {
 					c.Close()
 					return
 				}
-				if n > 1 && b[n-1] == 0x0d && b[n] == 0x0a && n < trojan.HeaderLen+1 {
+				if nr == 0 {
+					continue
+				}
+				// mimic nginx
+				if b[n] == 0x0a && n < trojan.HeaderLen+1 {
 					select {
 					case <-l.closed:
 						c.Close()
