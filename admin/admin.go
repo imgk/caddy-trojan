@@ -56,7 +56,7 @@ func (al *Admin) Routes() []caddy.AdminRoute {
 		},
 		{
 			Pattern: "/trojan/users/del",
-			Handler: caddy.AdminHandlerFunc(al.DelUser),
+			Handler: caddy.AdminHandlerFunc(al.DeleteUser),
 		},
 	}
 }
@@ -91,7 +91,6 @@ func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 
 	type User struct {
 		Password string `json:"password,omitempty"`
-		Key      string `json:"key,omitempty"`
 	}
 
 	b, err := io.ReadAll(r.Body)
@@ -101,12 +100,6 @@ func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 	user := User{}
 	if err := json.Unmarshal(b, &user); err != nil {
 		return err
-	}
-	if user.Key != "" {
-		al.Upstream.AddKey(user.Key)
-
-		w.WriteHeader(http.StatusOK)
-		return nil
 	}
 	if user.Password != "" {
 		al.Upstream.Add(user.Password)
@@ -116,15 +109,14 @@ func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// DelUser is ...
-func (al *Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
+// DeleteUser is ...
+func (al *Admin) DeleteUser(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodDelete {
 		return errors.New("delete trojan user method error")
 	}
 
 	type User struct {
 		Password string `json:"password,omitempty"`
-		Key      string `json:"key,omitempty"`
 	}
 
 	b, err := io.ReadAll(r.Body)
@@ -135,14 +127,8 @@ func (al *Admin) DelUser(w http.ResponseWriter, r *http.Request) error {
 	if err := json.Unmarshal(b, &user); err != nil {
 		return err
 	}
-	if user.Key != "" {
-		al.Upstream.DelKey(user.Key)
-
-		w.WriteHeader(http.StatusOK)
-		return nil
-	}
 	if user.Password != "" {
-		al.Upstream.Del(user.Password)
+		al.Upstream.Delete(user.Password)
 	}
 
 	w.WriteHeader(http.StatusOK)
