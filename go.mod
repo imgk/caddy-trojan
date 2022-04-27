@@ -3,12 +3,12 @@ module github.com/imgk/caddy-trojan
 go 1.18
 
 require (
-	github.com/caddyserver/caddy/v2 v2.5.0-rc.1.0.20220413201103-0d13173071dc
-	github.com/caddyserver/certmagic v0.16.0
+	github.com/caddyserver/caddy/v2 v2.5.1-0.20220427174137-3ab648382d40
+	github.com/caddyserver/certmagic v0.16.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/imgk/memory-go v0.0.0-20220328012817-37cdd311f1a3
 	go.uber.org/zap v1.21.0
-	golang.org/x/net v0.0.0-20220325170049-de3da57026de
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
 )
 
 require (
@@ -36,7 +36,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/golang/snappy v0.0.3 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/cel-go v0.7.3 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
@@ -81,7 +81,7 @@ require (
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/slackhq/nebula v1.5.2 // indirect
-	github.com/smallstep/certificates v0.18.3-0.20220329212333-b42c1dfe64cf // indirect
+	github.com/smallstep/certificates v0.19.0 // indirect
 	github.com/smallstep/cli v0.18.0 // indirect
 	github.com/smallstep/nosql v0.4.0 // indirect
 	github.com/smallstep/truststore v0.11.0 // indirect
@@ -92,8 +92,8 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.step.sm/cli-utils v0.7.0 // indirect
-	go.step.sm/crypto v0.15.3 // indirect
-	go.step.sm/linkedca v0.11.0 // indirect
+	go.step.sm/crypto v0.16.1 // indirect
+	go.step.sm/linkedca v0.15.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064 // indirect

@@ -55,7 +55,7 @@ func (al *Admin) Routes() []caddy.AdminRoute {
 			Handler: caddy.AdminHandlerFunc(al.AddUser),
 		},
 		{
-			Pattern: "/trojan/users/del",
+			Pattern: "/trojan/users/delete",
 			Handler: caddy.AdminHandlerFunc(al.DeleteUser),
 		},
 	}

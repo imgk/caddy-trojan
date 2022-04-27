@@ -131,7 +131,7 @@ func (u *CaddyUpstream) Provision(ctx caddy.Context) error {
 func (u *CaddyUpstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := string(b[:])
+	key := u.Prefix + string(b[:])
 	if u.Storage.Exists(context.Background(), key) {
 		return nil
 	}
@@ -150,7 +150,7 @@ func (u *CaddyUpstream) Add(s string) error {
 func (u *CaddyUpstream) Delete(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := utils.ByteSliceToString(b[:])
+	key := u.Prefix + utils.ByteSliceToString(b[:])
 	if !u.Storage.Exists(context.Background(), key) {
 		return nil
 	}
