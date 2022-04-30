@@ -24,7 +24,7 @@ func init() {
 type Upstream interface {
 	// Add is ...
 	Add(string) error
-	// Del is ...
+	// Delete is ...
 	Delete(string) error
 	// Range is ...
 	Range(func(string, int64, int64))
@@ -34,8 +34,33 @@ type Upstream interface {
 	Consume(string, int64, int64) error
 }
 
+// TaskType is ...
+type TaskType int
+
+const (
+	TaskAdd TaskType = iota
+	TaskDelete
+	TaskConsume
+)
+
+// Task is ...
+type Task struct {
+	Type  TaskType
+	Value struct {
+		Password string
+		Key      string
+		Traffic
+	}
+}
+
 // MemoryUpstream is ...
 type MemoryUpstream struct {
+	// UpstreamRaw is ...
+	UpstreamRaw json.RawMessage `json:"upstream" caddy:"namespace=trojan.upstreams inline_key=upstream"`
+
+	ch chan Task
+	up Upstream
+
 	mu sync.RWMutex
 	mm map[string]Traffic
 }
@@ -46,6 +71,45 @@ func (MemoryUpstream) CaddyModule() caddy.ModuleInfo {
 		ID:  "trojan.upstreams.memory",
 		New: func() caddy.Module { return new(MemoryUpstream) },
 	}
+}
+
+// Provision is ...
+func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
+	u.mm = make(map[string]Traffic)
+
+	if u.UpstreamRaw == nil {
+		return nil
+	}
+
+	mod, err := ctx.LoadModule(u, "UpstreamRaw")
+	if err != nil {
+		return err
+	}
+	u.up = mod.(Upstream)
+
+	u.up.Range(func(k string, nr, nw int64) {
+		u.Add(k)
+		u.Consume(k, nr, nw)
+	})
+
+	u.ch = make(chan Task, 16)
+
+	go func(up Upstream, ch chan Task) {
+		for {
+			t := <-ch
+			switch t.Type {
+			case TaskAdd:
+				up.Add(t.Value.Password)
+			case TaskDelete:
+				up.Delete(t.Value.Password)
+			case TaskConsume:
+				up.Consume(t.Value.Key, t.Value.Up, t.Value.Down)
+			default:
+			}
+		}
+	}(u.up, u.ch)
+
+	return nil
 }
 
 // Add is ...
@@ -59,6 +123,14 @@ func (u *MemoryUpstream) Add(s string) error {
 		Down: 0,
 	}
 	u.mu.Unlock()
+
+	if u.up == nil {
+		return nil
+	}
+
+	t := Task{Type: TaskAdd}
+	t.Value.Password = s
+	u.ch <- t
 	return nil
 }
 
@@ -70,6 +142,14 @@ func (u *MemoryUpstream) Delete(s string) error {
 	u.mu.Lock()
 	delete(u.mm, key)
 	u.mu.Unlock()
+
+	if u.up == nil {
+		return nil
+	}
+
+	t := Task{Type: TaskDelete}
+	t.Value.Password = s
+	u.ch <- t
 	return nil
 }
 
@@ -98,6 +178,16 @@ func (u *MemoryUpstream) Consume(k string, nr, nw int64) error {
 	traffic.Down += nw
 	u.mm[k] = traffic
 	u.mu.Unlock()
+
+	if u.up == nil {
+		return nil
+	}
+
+	t := Task{Type: TaskConsume}
+	t.Value.Key = k
+	t.Value.Up = nr
+	t.Value.Down = nw
+	u.ch <- t
 	return nil
 }
 
