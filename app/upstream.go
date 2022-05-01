@@ -96,7 +96,10 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 
 	go func(up Upstream, ch chan Task) {
 		for {
-			t := <-ch
+			t, ok := <-ch
+			if !ok {
+				break
+			}
 			switch t.Type {
 			case TaskAdd:
 				up.Add(t.Value.Password)
@@ -109,6 +112,12 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 		}
 	}(u.up, u.ch)
 
+	return nil
+}
+
+// Cleanup is ...
+func (u *MemoryUpstream) Cleanup() error {
+	close(u.ch)
 	return nil
 }
 
@@ -306,6 +315,8 @@ func (u *CaddyUpstream) Consume(k string, nr, nw int64) error {
 }
 
 var (
-	_ Upstream = (*CaddyUpstream)(nil)
-	_ Upstream = (*MemoryUpstream)(nil)
+	_ Upstream           = (*CaddyUpstream)(nil)
+	_ Upstream           = (*MemoryUpstream)(nil)
+	_ caddy.CleanerUpper = (*MemoryUpstream)(nil)
+	_ caddy.Provisioner  = (*MemoryUpstream)(nil)
 )
