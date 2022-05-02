@@ -85,13 +85,14 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
-	u.up = mod.(Upstream)
+	up := mod.(Upstream)
 
-	u.up.Range(func(k string, nr, nw int64) {
+	up.Range(func(k string, nr, nw int64) {
 		u.Add(k)
 		u.Consume(k, nr, nw)
 	})
 
+	u.up = up
 	u.ch = make(chan Task, 16)
 
 	go func(up Upstream, ch chan Task) {
