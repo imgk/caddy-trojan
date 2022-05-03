@@ -88,7 +88,7 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 	up := mod.(Upstream)
 
 	up.Range(func(k string, nr, nw int64) {
-		u.Add(k)
+		u.AddKey(k)
 		u.Consume(k, nr, nw)
 	})
 
@@ -126,13 +126,8 @@ func (u *MemoryUpstream) Cleanup() error {
 func (u *MemoryUpstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := string(b[:])
-	u.mu.Lock()
-	u.mm[key] = Traffic{
-		Up:   0,
-		Down: 0,
-	}
-	u.mu.Unlock()
+
+	u.AddKey(string(b[:]))
 
 	if u.up == nil {
 		return nil
@@ -142,6 +137,16 @@ func (u *MemoryUpstream) Add(s string) error {
 	t.Value.Password = s
 	u.ch <- t
 	return nil
+}
+
+// AddKey is ...
+func (u *MemoryUpstream) AddKey(key string) {
+	u.mu.Lock()
+	u.mm[key] = Traffic{
+		Up:   0,
+		Down: 0,
+	}
+	u.mu.Unlock()
 }
 
 // Delete is ...
