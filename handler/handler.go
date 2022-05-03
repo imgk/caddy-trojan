@@ -74,15 +74,12 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 	// trojan over http2/http3
 	// use CONNECT method, put trojan header as Proxy-Authorization
 	if m.Connect && r.Method == http.MethodConnect {
-		// base64.StdEncoding.Encode(hex.Encode(sha256.Sum224([]byte("Test1234"))))
-		const AuthLen = 76
-
 		// handle trojan over http2/http3
 		if r.ProtoMajor == 1 {
 			return next.ServeHTTP(w, r)
 		}
 		auth := strings.TrimPrefix(r.Header.Get("Proxy-Authorization"), "Basic ")
-		if len(auth) != AuthLen {
+		if len(auth) != trojan.HeaderLen {
 			return next.ServeHTTP(w, r)
 		}
 		if ok := m.Upstream.Validate(auth); !ok {

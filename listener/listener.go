@@ -32,6 +32,8 @@ type ListenerWrapper struct {
 	Proxy app.Proxy `json:"-,omitempty"`
 	// Logger is ...
 	Logger *zap.Logger `json:"-,omitempty"`
+	// Verbose is ...
+	Verbose bool `json:"verbose,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -61,6 +63,7 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 // WrapListener implements caddy.ListenWrapper
 func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
 	ln := NewListener(l, m.Upstream, m.Proxy, m.Logger)
+	ln.Verbose = m.Verbose
 	go ln.loop()
 	return ln
 }
@@ -79,7 +82,7 @@ var (
 
 // Listener is ...
 type Listener struct {
-	Verbose bool `json:"verbose,omitempty"`
+	Verbose bool
 
 	// Listener is ...
 	net.Listener
