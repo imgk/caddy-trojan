@@ -56,7 +56,7 @@ type Task struct {
 // MemoryUpstream is ...
 type MemoryUpstream struct {
 	// UpstreamRaw is ...
-	UpstreamRaw json.RawMessage `json:"upstream" caddy:"namespace=trojan.upstreams inline_key=upstream"`
+	UpstreamRaw json.RawMessage `json:"persist" caddy:"namespace=trojan.upstreams inline_key=upstream"`
 
 	ch chan Task
 	up Upstream
