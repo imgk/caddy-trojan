@@ -32,7 +32,7 @@ func (Admin) CaddyModule() caddy.ModuleInfo {
 // Provision is ...
 func (al *Admin) Provision(ctx caddy.Context) error {
 	if !ctx.AppIsConfigured(app.CaddyAppID) {
-		return errors.New("trojan is not configured")
+		return nil
 	}
 	mod, err := ctx.App(app.CaddyAppID)
 	if err != nil {
@@ -63,6 +63,10 @@ func (al *Admin) Routes() []caddy.AdminRoute {
 
 // GetUsers is ...
 func (al *Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
+	if al.Upstream == nil {
+		return nil
+	}
+
 	if r.Method != http.MethodGet {
 		return errors.New("get trojan user method error")
 	}
@@ -85,6 +89,10 @@ func (al *Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 
 // AddUser is ...
 func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
+	if al.Upstream == nil {
+		return nil
+	}
+
 	if r.Method != http.MethodPost {
 		return errors.New("add trojan user method error")
 	}
@@ -111,6 +119,10 @@ func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 
 // DeleteUser is ...
 func (al *Admin) DeleteUser(w http.ResponseWriter, r *http.Request) error {
+	if al.Upstream == nil {
+		return nil
+	}
+
 	if r.Method != http.MethodDelete {
 		return errors.New("delete trojan user method error")
 	}
