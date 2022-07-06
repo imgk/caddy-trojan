@@ -155,7 +155,9 @@ func (l *Listener) loop() {
 					if errors.Is(err, io.EOF) {
 						lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
 					} else {
-						lg.Error(fmt.Sprintf("read prefix error: %v", err))
+						lg.Error(fmt.Sprintf("read prefix error, not io, rewind and let normal caddy deal with it: %v", err))
+						l.conns <- utils.RewindConn(c, b[:n+1])
+						return
 					}
 					c.Close()
 					return
