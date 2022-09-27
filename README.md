@@ -15,7 +15,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                     "listener_wrappers": [{
                         "wrapper": "trojan"
                     }],
-                    "allow_h2c": true,
                     "routes": [
                         {
                             "handle": [
@@ -50,15 +49,11 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		listener_wrappers {
 			trojan
 		}
-		protocol {
-			allow_h2c
-			experimental_http3
-		}
 	}
 	trojan {
 		caddy
 		no_proxy
-		users word1234 test5678
+		users pass1234 word5678
 	}
 }
 
