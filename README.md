@@ -49,6 +49,11 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                 "proxy": "no_proxy"
             },
             "users": ["pass1234", "word5678"]
+        },
+        "tls": {
+            "certificates": {
+                "automate": ["example.com"]
+            }
         }
     }
 }
