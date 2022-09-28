@@ -11,21 +11,33 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
     "apps": {
         "http": {
             "servers": {
-                "": {
-                    "listener_wrappers": [{
-                        "wrapper": "trojan"
-                    }],
+                "srv0": {
+                    "listen": [":443"],
+                    "listener_wrappers": [
+                        {
+                            "wrapper": "trojan"
+                        }
+		    ],
                     "routes": [
                         {
                             "handle": [
                                 {
                                     "handler": "trojan",
-                                    "connect_method": false,
-                                    "websocket": false
+                                    "connect_method": true,
+                                    "websocket": true
+                                }
+                            ]
+                        },
+                        {
+                            "handle": [
+                                {
+                                    "handler": "file_server",
+                                    "root": "/var/www/html"
                                 }
                             ]
                         }
-                    ]
+                    ],
+                    "protocols": ["h1","h2c","h2"]
                 }
             }
         },
@@ -36,7 +48,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
             "proxy": {
                 "proxy": "no_proxy"
             },
-            "users": ["pass1234", "word5678"],
+            "users": ["pass1234", "word5678"]
         }
     }
 }
@@ -45,10 +57,11 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 
 ```
 {
-	servers {
+	servers :443 {
 		listener_wrappers {
 			trojan
 		}
+		protocols h1 h2c h2
 	}
 	trojan {
 		caddy
@@ -58,7 +71,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 }
 
 :443, example.com {
-	tls email@example.com
 	route {
 		trojan {
 			connect_method
