@@ -71,7 +71,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 }
 
 :443, example.com {
-	tls email@example.com
 	route {
 		trojan {
 			connect_method
