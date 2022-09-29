@@ -41,7 +41,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
                 }
             }
         },
-        "trojan":{
+        "trojan": {
             "upstream": {
                 "upstream": "caddy"
             },
