@@ -5,63 +5,10 @@
 $ xcaddy build --with github.com/imgk/caddy-trojan
 ```
 
-##  Config (JSON)
-```jsonc
-{
-    "apps": {
-        "http": {
-            "servers": {
-                "srv0": {
-                    "listen": [":443"],
-                    "listener_wrappers": [
-                        {
-                            "wrapper": "trojan"
-                        }
-		    ],
-                    "routes": [
-                        {
-                            "handle": [
-                                {
-                                    "handler": "trojan",
-                                    "connect_method": true,
-                                    "websocket": true
-                                }
-                            ]
-                        },
-                        {
-                            "handle": [
-                                {
-                                    "handler": "file_server",
-                                    "root": "/var/www/html"
-                                }
-                            ]
-                        }
-                    ],
-                    "protocols": ["h1","h2c","h2"]
-                }
-            }
-        },
-        "trojan": {
-            "upstream": {
-                "upstream": "caddy"
-            },
-            "proxy": {
-                "proxy": "no_proxy"
-            },
-            "users": ["pass1234", "word5678"]
-        },
-        "tls": {
-            "certificates": {
-                "automate": ["example.com"]
-            }
-        }
-    }
-}
-```
 ##  Config (Caddyfile)
-
 ```
 {
+	order trojan before file_server
 	servers :443 {
 		listener_wrappers {
 			trojan
@@ -74,17 +21,57 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		users pass1234 word5678
 	}
 }
-
 :443, example.com {
-	route {
-		trojan {
-			connect_method
-			websocket
-		}
-		file_server {
-			root /var/www/html
-		}
+	trojan {
+		connect_method
+		websocket
 	}
+	file_server {
+		root /var/www/html
+	}
+}
+```
+##  Config (JSON)
+```
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [":443"],
+          "listener_wrappers": [{
+            "wrapper": "trojan"
+          }],
+          "routes": [{
+            "handle": [{
+              "handler": "trojan",
+              "connect_method": true,
+              "websocket": true
+            },
+            {
+              "handler": "file_server",
+              "root": "/var/www/html"
+            }]
+          }],
+          "protocols": ["h1","h2c","h2"]
+        }
+      }
+    },
+    "trojan": {
+      "upstream": {
+        "upstream": "caddy"
+      },
+      "proxy": {
+        "proxy": "no_proxy"
+      },
+      "users": ["pass1234","word5678"]
+    },
+    "tls": {
+      "certificates": {
+        "automate": ["example.com"]
+      }
+    }
+  }
 }
 ```
 
