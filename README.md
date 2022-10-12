@@ -13,7 +13,6 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		listener_wrappers {
 			trojan
 		}
-		protocols h1 h2c h2
 	}
 	trojan {
 		caddy
@@ -22,6 +21,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 	}
 }
 :443, example.com {
+	tls your@email.com #optional, recommended
 	trojan {
 		connect_method
 		websocket
@@ -52,8 +52,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
               "handler": "file_server",
               "root": "/var/www/html"
             }]
-          }],
-          "protocols": ["h1","h2c","h2"]
+          }]
         }
       }
     },
@@ -69,6 +68,18 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
     "tls": {
       "certificates": {
         "automate": ["example.com"]
+      },
+      "automation": {
+        "policies": [{
+          "issuers": [{
+            "module": "acme",
+            "email": "your@email.com" //optional, recommended
+          },
+          {
+            "module": "zerossl",
+            "email": "your@email.com" //optional, recommended
+          }]
+        }]
       }
     }
   }
