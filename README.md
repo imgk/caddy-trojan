@@ -73,11 +73,11 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
         "policies": [{
           "issuers": [{
             "module": "acme",
-            "email": "your@email.com" //optional, recommended
+            "email": "your@email.com" //optional,recommended
           },
           {
             "module": "zerossl",
-            "email": "your@email.com" //optional, recommended
+            "email": "your@email.com" //optional,recommended
           }]
         }]
       }
