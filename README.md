@@ -21,7 +21,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 	}
 }
 :443, example.com {
-	tls your@email.com #optional, recommended
+	tls your@email.com #optional,recommended
 	trojan {
 		connect_method
 		websocket
