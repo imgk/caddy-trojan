@@ -12,7 +12,6 @@ fi
 cat <<EOF >/etc/caddy/Caddyfile
 {
     order trojan before route
-    admin off
     servers :443 {
         listener_wrappers {
             trojan
