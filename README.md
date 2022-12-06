@@ -92,3 +92,12 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 ```
 curl -X POST -H "Content-Type: application/json" -d '{"password": "test1234"}' http://localhost:2019/trojan/users/add
 ```
+
+## Docker
+
+```
+git clone https://github.com/imgk/caddy-trojan
+cd caddy-trojan/Dockerfiles
+docker build -t caddy-trojan .
+docker run --env MYPASSWD=MY_PASSWORD --env MYDOMAIN=MY_DOMAIN.COM -itd --name caddy-trojan --restart always -p 80:80 -p 443:443 caddy-trojan
+```
