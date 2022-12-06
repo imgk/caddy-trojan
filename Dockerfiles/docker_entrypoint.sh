@@ -1,11 +1,11 @@
 #!/bin/sh
 
-if [[ "$MYPASSWD" == "123456" ]]; then
-    echo 密码配置错误 && exit 1
+if [[ "$MYPASSWD" == "123456" || "$MYPASSWD" == "MY_PASSWORD" ]]; then
+    echo please reset your password && exit 1
 fi
 
-if [[ "$MYDOMAIN" == "1.1.1.1.nip.io" ]]; then
-    echo 域名配置错误 && exit 1
+if [[ "$MYDOMAIN" == "1.1.1.1.nip.io" || "$MYDOMAIN" == "MY_DOMAIN.COM" ]]; then
+    echo please reset your domain name && exit 1
 fi
 
 # config
