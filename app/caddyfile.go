@@ -11,11 +11,11 @@ func init() {
 }
 
 /*
-trojan {
-	caddy
-	no_proxy | env_proxy
-	users pass1234 word5678
-}
+	trojan {
+		caddy
+		no_proxy | env_proxy
+		users pass1234 word5678
+	}
 */
 func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
 	app := &App{
