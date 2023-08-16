@@ -1,9 +1,9 @@
 module github.com/imgk/caddy-trojan
 
-go 1.21
+go 1.20.0
 
 require (
-	github.com/caddyserver/caddy/v2 v2.7.4-0.20230812025311-2d7d806fcf91
+	github.com/caddyserver/caddy/v2 v2.7.3
 	github.com/caddyserver/certmagic v0.19.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/imgk/memory-go v0.0.0-20220328012817-37cdd311f1a3
@@ -74,7 +74,7 @@ require (
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-20 v0.3.1 // indirect
-	github.com/quic-go/quic-go v0.37.4 // indirect
+	github.com/quic-go/quic-go v0.37.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
