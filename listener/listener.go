@@ -48,8 +48,8 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	m.Logger = ctx.Logger(m)
 	ctx.App(app.CaddyAppID)
-	if ctx.AppIfConfigured(app.CaddyAppID) == nil {
-		return errors.New("listener: trojan is not configured")
+	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
+		return fmt.Errorf("trojan configure error: %w", err)
 	}
 	mod, err := ctx.App(app.CaddyAppID)
 	if err != nil {

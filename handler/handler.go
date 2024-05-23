@@ -2,7 +2,7 @@ package handler
 
 import (
 	//"errors"
-	"errors"
+
 	"fmt"
 	"io"
 	"net/http"
@@ -58,8 +58,8 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 func (m *Handler) Provision(ctx caddy.Context) error {
 	m.Logger = ctx.Logger(m)
 	ctx.App(app.CaddyAppID)
-	if ctx.AppIfConfigured(app.CaddyAppID) == nil {
-		return errors.New("handler: trojan is not configured")
+	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
+		return fmt.Errorf("trojan handler configure error: %w", err)
 	}
 	mod, err := ctx.App(app.CaddyAppID)
 	if err != nil {
