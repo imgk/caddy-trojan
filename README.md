@@ -76,7 +76,8 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
             "email": "your@email.com" //optional,recommended
           },
           {
-            "module": "zerossl",
+            "module": "acme",
+            "ca": "https://acme.zerossl.com/v2/DV90",
             "email": "your@email.com" //optional,recommended
           }]
         }]
