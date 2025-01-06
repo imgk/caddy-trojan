@@ -15,8 +15,8 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		}
 	}
 	trojan {
-		caddy
 		no_proxy
+		caddy
 		users pass1234 word5678
 	}
 }
@@ -57,11 +57,11 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
       }
     },
     "trojan": {
-      "upstream": {
-        "upstream": "caddy"
-      },
       "proxy": {
         "proxy": "no_proxy"
+      },
+      "upstream": {
+        "upstream": "caddy"
       },
       "users": ["pass1234","word5678"]
     },
@@ -76,7 +76,8 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
             "email": "your@email.com" //optional,recommended
           },
           {
-            "module": "zerossl",
+            "module": "acme",
+            "ca": "https://acme.zerossl.com/v2/DV90",
             "email": "your@email.com" //optional,recommended
           }]
         }]
