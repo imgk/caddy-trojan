@@ -3,12 +3,12 @@ module github.com/imgk/caddy-trojan
 go 1.22.3
 
 require (
-	github.com/caddyserver/caddy/v2 v2.9.0
-	github.com/caddyserver/certmagic v0.21.5
+	github.com/caddyserver/caddy/v2 v2.9.1
+	github.com/caddyserver/certmagic v0.21.6
 	github.com/gorilla/websocket v1.5.3
 	github.com/imgk/memory-go v0.0.0-20220328012817-37cdd311f1a3
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.33.0
+	golang.org/x/net v0.34.0
 )
 
 require (
@@ -132,13 +132,13 @@ require (
 	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20241104001025-71ed71b4faf9 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
