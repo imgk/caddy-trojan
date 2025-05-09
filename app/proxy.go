@@ -31,7 +31,7 @@ type NoProxy struct{}
 // CaddyModule is ...
 func (NoProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "trojan.proxies.no_proxy",
+		ID:  "trojan.proxy.no_proxy",
 		New: func() caddy.Module { return new(NoProxy) },
 	}
 }
@@ -54,7 +54,7 @@ type EnvProxy struct {
 // CaddyModule is ...
 func (EnvProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "trojan.proxies.env_proxy",
+		ID:  "trojan.proxy.env_proxy",
 		New: func() caddy.Module { return new(EnvProxy) },
 	}
 }

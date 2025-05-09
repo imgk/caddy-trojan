@@ -56,7 +56,7 @@ type Task struct {
 // MemoryUpstream is ...
 type MemoryUpstream struct {
 	// UpstreamRaw is ...
-	UpstreamRaw json.RawMessage `json:"persist" caddy:"namespace=trojan.upstreams inline_key=upstream"`
+	UpstreamRaw json.RawMessage `json:"persist" caddy:"namespace=trojan.upstream inline_key=upstream"`
 
 	ch chan Task
 	up Upstream
@@ -68,7 +68,7 @@ type MemoryUpstream struct {
 // CaddyModule is ...
 func (MemoryUpstream) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "trojan.upstreams.memory",
+		ID:  "trojan.upstream.memory",
 		New: func() caddy.Module { return new(MemoryUpstream) },
 	}
 }
@@ -219,7 +219,7 @@ type CaddyUpstream struct {
 // CaddyModule is ...
 func (CaddyUpstream) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "trojan.upstreams.caddy",
+		ID:  "trojan.upstream.caddy",
 		New: func() caddy.Module { return new(CaddyUpstream) },
 	}
 }
