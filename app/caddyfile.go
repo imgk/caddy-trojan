@@ -51,7 +51,7 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 				if err != nil {
 					return nil, fmt.Errorf("remove null key error: %w", err)
 				}
-			case "no_proxy", "env_proxy", "socks_proxy", "http_proxy":
+			case "no_proxy", "env_proxy", "socks_proxy", "http_proxy", "unix_proxy":
 				if app.ProxyRaw != nil {
 					return nil, d.Err("only one proxy is allowed")
 				}
@@ -83,9 +83,6 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 				}
 				name, typ := args[0], args[1]
 				parser, ok := GetProxyParser(typ)
-				if !ok {
-					return nil, d.Errf("unknown proxy type: %s", typ)
-				}
 				if !ok {
 					return nil, d.Errf("unsupported proxy type: %s", typ)
 				}
