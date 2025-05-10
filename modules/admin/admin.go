@@ -40,7 +40,7 @@ func (al *Admin) Provision(ctx caddy.Context) error {
 		return err
 	}
 	app := mod.(*app.App)
-	al.Upstream = app.Upstream()
+	al.Upstream = app.GetUpstream()
 	return nil
 }
 

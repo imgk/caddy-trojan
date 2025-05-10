@@ -23,9 +23,10 @@ type App struct {
 	// Users is ...
 	Users []string `json:"users,omitempty"`
 
+	Upstream
+	Proxy
+
 	lg *zap.Logger
-	up Upstream
-	px Proxy
 }
 
 // CaddyModule is ...
@@ -42,16 +43,16 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
-	app.up = mod.(Upstream)
+	app.Upstream = mod.(Upstream)
 
 	mod, err = ctx.LoadModule(app, "ProxyRaw")
 	if err != nil {
 		return err
 	}
-	app.px = mod.(Proxy)
+	app.Proxy = mod.(Proxy)
 
 	for _, v := range app.Users {
-		app.up.Add(v)
+		app.Upstream.Add(v)
 	}
 
 	app.lg = ctx.Logger(app)
@@ -66,17 +67,17 @@ func (app *App) Start() error {
 
 // Stop is ...
 func (app *App) Stop() error {
-	return app.px.Close()
+	return app.Proxy.Close()
 }
 
 // Upstream is ...
-func (app *App) Upstream() Upstream {
-	return app.up
+func (app *App) GetUpstream() Upstream {
+	return app
 }
 
 // Proxy is ...
-func (app *App) Proxy() Proxy {
-	return app.px
+func (app *App) GetProxy() Proxy {
+	return app
 }
 
 var (

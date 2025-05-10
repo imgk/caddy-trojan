@@ -16,9 +16,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/imgk/caddy-trojan/app"
-	"github.com/imgk/caddy-trojan/trojan"
-	"github.com/imgk/caddy-trojan/utils"
-	"github.com/imgk/caddy-trojan/websocket"
+	"github.com/imgk/caddy-trojan/pkgs/trojan"
+	"github.com/imgk/caddy-trojan/pkgs/websocket"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 )
 
 func init() {
@@ -66,8 +66,8 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 		return err
 	}
 	app := mod.(*app.App)
-	m.Upstream = app.Upstream()
-	m.Proxy = app.Proxy()
+	m.Upstream = app.GetUpstream()
+	m.Proxy = app.GetProxy()
 	return nil
 }
 
@@ -114,7 +114,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.Logger.Error(fmt.Sprintf("read trojan header error: %v", err))
 			return nil
 		}
-		if ok := m.Upstream.Validate(utils.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
+		if ok := m.Upstream.Validate(x.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 			return nil
 		}
 		if m.Verbose {
@@ -125,7 +125,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 		if err != nil {
 			m.Logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
-		m.Upstream.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
+		m.Upstream.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		return nil
 	}
 	return next.ServeHTTP(w, r)

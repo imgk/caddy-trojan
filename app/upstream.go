@@ -11,8 +11,8 @@ import (
 	"github.com/caddyserver/certmagic"
 	"go.uber.org/zap"
 
-	"github.com/imgk/caddy-trojan/trojan"
-	"github.com/imgk/caddy-trojan/utils"
+	"github.com/imgk/caddy-trojan/pkgs/trojan"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 )
 
 func init() {
@@ -153,7 +153,7 @@ func (u *MemoryUpstream) AddKey(key string) {
 func (u *MemoryUpstream) Delete(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := utils.ByteSliceToString(b[:])
+	key := x.ByteSliceToString(b[:])
 	u.mu.Lock()
 	delete(u.mm, key)
 	u.mu.Unlock()
@@ -255,7 +255,7 @@ func (u *CaddyUpstream) Add(s string) error {
 func (u *CaddyUpstream) Delete(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := u.Prefix + utils.ByteSliceToString(b[:])
+	key := u.Prefix + x.ByteSliceToString(b[:])
 	if !u.Storage.Exists(context.Background(), key) {
 		return nil
 	}

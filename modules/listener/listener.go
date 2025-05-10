@@ -13,8 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/imgk/caddy-trojan/app"
-	"github.com/imgk/caddy-trojan/trojan"
-	"github.com/imgk/caddy-trojan/utils"
+	"github.com/imgk/caddy-trojan/pkgs/rawconn"
+	"github.com/imgk/caddy-trojan/pkgs/trojan"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 )
 
 func init() {
@@ -56,8 +57,8 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 		return err
 	}
 	app := mod.(*app.App)
-	m.Upstream = app.Upstream()
-	m.Proxy = app.Proxy()
+	m.Upstream = app.GetUpstream()
+	m.Proxy = app.GetProxy()
 	return nil
 }
 
@@ -157,7 +158,7 @@ func (l *Listener) loop() {
 						lg.Error(fmt.Sprintf("read prefix error: read tcp %v -> %v: read: %v", c.RemoteAddr(), c.LocalAddr(), err))
 					} else {
 						lg.Error(fmt.Sprintf("read prefix error, not io, rewind and let normal caddy deal with it: %v", err))
-						l.conns <- utils.RewindConn(c, b[:n+1])
+						l.conns <- rawconn.RewindConn(c, b[:n+1])
 						return
 					}
 					c.Close()
@@ -172,19 +173,19 @@ func (l *Listener) loop() {
 					case <-l.closed:
 						c.Close()
 					default:
-						l.conns <- utils.RewindConn(c, b[:n+1])
+						l.conns <- rawconn.RewindConn(c, b[:n+1])
 					}
 					return
 				}
 			}
 
 			// check the net.Conn
-			if ok := up.Validate(utils.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
+			if ok := up.Validate(x.ByteSliceToString(b[:trojan.HeaderLen])); !ok {
 				select {
 				case <-l.closed:
 					c.Close()
 				default:
-					l.conns <- utils.RewindConn(c, b)
+					l.conns <- rawconn.RewindConn(c, b)
 				}
 				return
 			}
@@ -197,7 +198,7 @@ func (l *Listener) loop() {
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}
-			up.Consume(utils.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
+			up.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		}(conn, l.Logger, l.Upstream)
 	}
 }
