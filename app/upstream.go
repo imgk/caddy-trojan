@@ -282,8 +282,6 @@ func (u *CaddyUpstream) Range(fn func(k string, up, down int64)) {
 		}
 		fn(strings.TrimPrefix(k, u.Prefix), traffic.Up, traffic.Down)
 	}
-
-	return
 }
 
 // Validate is ...
