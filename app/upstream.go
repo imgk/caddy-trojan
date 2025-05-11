@@ -78,6 +78,7 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 	u.mm = make(map[string]Traffic)
 
 	if u.UpstreamRaw == nil {
+		u.ch = make(chan Task)
 		return nil
 	}
 
