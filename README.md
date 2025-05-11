@@ -58,7 +58,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
     },
     "trojan": {
       "proxy": {
-        "proxy": "no_proxy"
+        "proxy": "none"
       },
       "upstream": {
         "upstream": "caddy"
