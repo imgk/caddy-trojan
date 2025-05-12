@@ -15,8 +15,13 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		}
 	}
 	trojan {
-		no_proxy
 		caddy
+		no_proxy
+		#env_proxy
+		#socks_proxy server user passwd
+		#socks_proxy server
+		#http_proxy server user passwd
+		#http_proxy server
 		users pass1234 word5678
 	}
 }

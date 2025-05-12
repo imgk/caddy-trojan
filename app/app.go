@@ -23,8 +23,8 @@ type App struct {
 	// Users is ...
 	Users []string `json:"users,omitempty"`
 
-	Upstream
-	Proxy
+	Upstream `json:"-,omitempty"`
+	Proxy    `json:"-,omitempty"`
 
 	lg *zap.Logger
 }
