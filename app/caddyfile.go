@@ -101,6 +101,14 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 		}
 	}
 
+	if app.ProxyRaw == nil {
+		app.ProxyRaw = caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil)
+	}
+
+	if app.UpstreamRaw == nil {
+		app.UpstreamRaw = caddyconfig.JSONModuleObject(new(MemoryUpstream), "upstream", "memory", nil)
+	}
+
 	return httpcaddyfile.App{
 		Name:  "trojan",
 		Value: caddyconfig.JSON(app, nil),

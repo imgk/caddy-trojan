@@ -16,12 +16,15 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 	}
 	trojan {
 		caddy
+    # memory
+
 		no_proxy
-		#env_proxy
-		#socks_proxy server user passwd
-		#socks_proxy server
-		#http_proxy server user passwd
-		#http_proxy server
+		# env_proxy
+		# socks_proxy server user passwd
+		# socks_proxy server
+		# http_proxy server user passwd
+		# http_proxy server
+
 		users pass1234 word5678
 	}
 }
@@ -62,10 +65,10 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
       }
     },
     "trojan": {
-      "proxy": {
+      "proxy": { //optional
         "proxy": "none"
       },
-      "upstream": {
+      "upstream": { //optional
         "upstream": "caddy"
       },
       "users": ["pass1234","word5678"]

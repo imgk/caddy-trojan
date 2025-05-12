@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +40,14 @@ func (App) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (app *App) Provision(ctx caddy.Context) error {
+	if app.ProxyRaw == nil {
+		app.ProxyRaw = caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil)
+	}
+
+	if app.UpstreamRaw == nil {
+		app.UpstreamRaw = caddyconfig.JSONModuleObject(new(MemoryUpstream), "upstream", "memory", nil)
+	}
+
 	mod, err := ctx.LoadModule(app, "UpstreamRaw")
 	if err != nil {
 		return err
