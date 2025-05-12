@@ -1,6 +1,8 @@
 package app
 
 import (
+	"encoding/json"
+
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -14,14 +16,17 @@ func init() {
 	trojan {
 		caddy
 		no_proxy | env_proxy | socks_proxy server user passwd | http_proxy server user passwd
+		named_proxy proxy_name proxy_type server user password
 		users pass1234 word5678
 	}
 */
-func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) {
+func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 	app := &App{
-		UpstreamRaw: nil,
-		ProxyRaw:    nil,
-		Users:       []string{},
+		UpstreamRaw:   nil,
+		ProxyRaw:      nil,
+		NamedProxyRaw: map[string]json.RawMessage{},
+		Users:         []string{},
+		NamedProxy:    map[string]Proxy{},
 	}
 
 	for d.Next() {
@@ -96,8 +101,35 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 					}
 					app.Users = append(app.Users, v)
 				}
-			}
+			case "named_proxy":
+				args := d.RemainingArgs()
+				if len(args) != 3 || len(args) != 5 {
+					return nil, d.ArgErr()
+				}
 
+				switch args[1] {
+				case "socks":
+					socks := new(SocksProxy)
+					socks.Server = args[2]
+					if len(args) > 3 {
+						socks.User = args[3]
+						socks.Password = args[4]
+					}
+					app.NamedProxyRaw[args[0]] = caddyconfig.JSONModuleObject(socks, "proxy", "socks", nil)
+				case "http":
+					http := new(HttpProxy)
+					http.Server = args[2]
+					if len(args) > 3 {
+						http.User = args[3]
+						http.Password = args[4]
+					}
+					app.NamedProxyRaw[args[0]] = caddyconfig.JSONModuleObject(http, "proxy", "socks", nil)
+				default:
+					return nil, d.ArgErr()
+				}
+			default:
+				return nil, d.ArgErr()
+			}
 		}
 	}
 

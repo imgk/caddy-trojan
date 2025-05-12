@@ -32,9 +32,10 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
-	WebSocket bool `json:"websocket,omitempty"`
-	Connect   bool `json:"connect_method,omitempty"`
-	Verbose   bool `json:"verbose,omitempty"`
+	ProxyName string `json:"proxy_name,omitempty"`
+	WebSocket bool   `json:"websocket,omitempty"`
+	Connect   bool   `json:"connect_method,omitempty"`
+	Verbose   bool   `json:"verbose,omitempty"`
 
 	// Upstream is ...
 	Upstream app.Upstream `json:"-,omitempty"`
@@ -57,7 +58,6 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *Handler) Provision(ctx caddy.Context) error {
 	m.Logger = ctx.Logger(m)
-	ctx.App(app.CaddyAppID)
 	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
 		return fmt.Errorf("trojan handler configure error: %w", err)
 	}
@@ -67,7 +67,11 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	}
 	app := mod.(*app.App)
 	m.Upstream = app.GetUpstream()
-	m.Proxy = app.GetProxy()
+	var ok bool
+	m.Proxy, ok = app.GetProxyByName(m.ProxyName)
+	if !ok {
+		return fmt.Errorf("proxy name: %v does not exist", m.ProxyName)
+	}
 	return nil
 }
 

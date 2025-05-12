@@ -119,6 +119,9 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 
 // Cleanup is ...
 func (u *MemoryUpstream) Cleanup() error {
+	if u.ch == nil {
+		return nil
+	}
 	close(u.ch)
 	return nil
 }

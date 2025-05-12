@@ -33,6 +33,8 @@ type ListenerWrapper struct {
 	Proxy app.Proxy `json:"-,omitempty"`
 	// Logger is ...
 	Logger *zap.Logger `json:"-,omitempty"`
+
+	ProxyName string `json:"proxy_name,omitempty"`
 	// Verbose is ...
 	Verbose bool `json:"verbose,omitempty"`
 }
@@ -48,7 +50,6 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	m.Logger = ctx.Logger(m)
-	ctx.App(app.CaddyAppID)
 	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
 		return fmt.Errorf("trojan configure error: %w", err)
 	}
@@ -58,7 +59,15 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 	}
 	app := mod.(*app.App)
 	m.Upstream = app.GetUpstream()
-	m.Proxy = app.GetProxy()
+	if m.ProxyName == "" {
+		m.Proxy = app.GetProxy()
+		return nil
+	}
+	var ok bool
+	m.Proxy, ok = app.GetProxyByName(m.ProxyName)
+	if !ok {
+		return fmt.Errorf("proxy name: %v does not exist", m.ProxyName)
+	}
 	return nil
 }
 

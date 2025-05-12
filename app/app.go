@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -21,11 +22,14 @@ type App struct {
 	UpstreamRaw json.RawMessage `json:"upstream" caddy:"namespace=trojan.upstream inline_key=upstream"`
 	// ProxyRaw is ...
 	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+	// NamedProxyRaw is ...
+	NamedProxyRaw map[string]json.RawMessage `json:"named_proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
 	// Users is ...
 	Users []string `json:"users,omitempty"`
 
-	Upstream `json:"-,omitempty"`
-	Proxy    `json:"-,omitempty"`
+	Upstream   `json:"-,omitempty"`
+	Proxy      `json:"-,omitempty"`
+	NamedProxy map[string]Proxy `json:"-,omitempty"`
 
 	lg *zap.Logger
 }
@@ -60,6 +64,17 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 	app.Proxy = mod.(Proxy)
 
+	app.NamedProxy = make(map[string]Proxy)
+	if app.NamedProxyRaw != nil {
+		vals, err := ctx.LoadModule(app, "NamedProxyRaw")
+		if err != nil {
+			return fmt.Errorf("loading trojan.proxy modules: %w", err)
+		}
+		for fieldName, modIface := range vals.(map[string]any) {
+			app.NamedProxy[fieldName] = modIface.(Proxy)
+		}
+	}
+
 	for _, v := range app.Users {
 		app.Upstream.Add(v)
 	}
@@ -87,6 +102,11 @@ func (app *App) GetUpstream() Upstream {
 // Proxy is ...
 func (app *App) GetProxy() Proxy {
 	return app
+}
+
+func (app *App) GetProxyByName(name string) (Proxy, bool) {
+	v, ok := app.NamedProxy[name]
+	return v, ok
 }
 
 var (

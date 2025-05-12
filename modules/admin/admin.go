@@ -31,9 +31,11 @@ func (Admin) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (al *Admin) Provision(ctx caddy.Context) error {
-	ctx.App(app.CaddyAppID)
 	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
-		return nil
+		if errors.Is(err, caddy.ErrNotConfigured) {
+			return nil
+		}
+		return err
 	}
 	mod, err := ctx.App(app.CaddyAppID)
 	if err != nil {
