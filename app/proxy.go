@@ -216,6 +216,56 @@ func (p *HttpProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 	return nil, errors.New("does not support UDP for http proxy")
 }
 
+func NewProxy(config map[string]any) (Proxy, error) {
+	name, ok := config["name"].(string)
+	if !ok {
+		return nil, nil
+	}
+	switch name {
+	case "none":
+		return new(NoProxy), nil
+	case "env":
+		return new(EnvProxy), nil
+	case "socks":
+		proxy := new(SocksProxy)
+		proxy.Server, _ = config["server"].(string)
+		proxy.User, _ = config["user"].(string)
+		proxy.Password, _ = config["password"].(string)
+		if len(proxy.Server) == 0 {
+			return nil, fmt.Errorf("socks proxy server params is missing")
+		}
+
+		if len(proxy.User) > 0 && len(proxy.Password) == 0 {
+			return nil, fmt.Errorf("socks proxy passwd params is missing")
+		}
+
+		if len(proxy.Password) > 0 && len(proxy.User) == 0 {
+			return nil, fmt.Errorf("socks proxy user params is missing")
+		}
+		proxy.Provision(caddy.Context{})
+		return proxy, nil
+	case "http":
+		proxy := new(HttpProxy)
+		proxy.Server, _ = config["server"].(string)
+		proxy.User, _ = config["user"].(string)
+		proxy.Password, _ = config["password"].(string)
+		if len(proxy.Server) == 0 {
+			return nil, fmt.Errorf("http proxy server params is missing")
+		}
+
+		if len(proxy.User) > 0 && len(proxy.Password) == 0 {
+			return nil, fmt.Errorf("http proxy passwd params is missing")
+		}
+
+		if len(proxy.Password) > 0 && len(proxy.User) == 0 {
+			return nil, fmt.Errorf("http proxy user params is missing")
+		}
+		proxy.Provision(caddy.Context{})
+		return proxy, nil
+	}
+	return nil, nil
+}
+
 var (
 	_ Proxy             = (*NoProxy)(nil)
 	_ caddy.Provisioner = (*EnvProxy)(nil)

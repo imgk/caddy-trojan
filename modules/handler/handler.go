@@ -3,6 +3,7 @@ package handler
 import (
 	//"errors"
 
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,10 +33,10 @@ func init() {
 
 // Handler implements an HTTP handler that ...
 type Handler struct {
-	WebSocket bool `json:"websocket,omitempty"`
-	Connect   bool `json:"connect_method,omitempty"`
-	Verbose   bool `json:"verbose,omitempty"`
-
+	WebSocket bool            `json:"websocket,omitempty"`
+	Connect   bool            `json:"connect_method,omitempty"`
+	Verbose   bool            `json:"verbose,omitempty"`
+	ProxyRaw  json.RawMessage `json:"proxy,omitempty"`
 	// Upstream is ...
 	Upstream app.Upstream `json:"-,omitempty"`
 	// Proxy is ...
@@ -65,9 +66,24 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
-	app := mod.(*app.App)
-	m.Upstream = app.GetUpstream()
-	m.Proxy = app.GetProxy()
+	_app := mod.(*app.App)
+	m.Upstream = _app.GetUpstream()
+	m.Proxy = _app.GetProxy()
+	if m.ProxyRaw != nil && len(m.ProxyRaw) > 0 {
+		config := make(map[string]any)
+		err := json.Unmarshal(m.ProxyRaw, &config)
+		if err != nil {
+			return err
+		}
+		proxy, err := app.NewProxy(config)
+		if err != nil {
+			return err
+		}
+
+		if proxy != nil {
+			m.Proxy = proxy
+		}
+	}
 	return nil
 }
 
@@ -158,6 +174,62 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return d.Err("only one verbose is not allowed")
 			}
 			h.Verbose = true
+		case "no_proxy":
+			config := make(map[string]string)
+			config["name"] = "none"
+			rawConfig, err := json.Marshal(config)
+			if err != nil {
+				return d.Errf("failed to marshal config: %v", err)
+			}
+			h.ProxyRaw = rawConfig
+		case "env_proxy":
+			config := make(map[string]string)
+			config["name"] = "env"
+			rawConfig, err := json.Marshal(config)
+			if err != nil {
+				return d.Errf("failed to marshal config: %v", err)
+			}
+			h.ProxyRaw = rawConfig
+		case "socks_proxy":
+			args := d.RemainingArgs()
+			if len(args) < 1 {
+				return d.Err("server params is missing")
+			} else if len(args) == 2 {
+				return d.Err("passwd params is missing")
+			}
+
+			config := make(map[string]string)
+			config["name"] = "socks"
+			config["server"] = args[0]
+			if len(args) > 1 {
+				config["user"] = args[1]
+				config["password"] = args[2]
+			}
+			rawConfig, err := json.Marshal(config)
+			if err != nil {
+				return d.Errf("failed to marshal config: %v", err)
+			}
+			h.ProxyRaw = rawConfig
+		case "http_proxy":
+			args := d.RemainingArgs()
+			if len(args) < 1 {
+				return d.Err("server params is missing")
+			} else if len(args) == 2 {
+				return d.Err("passwd params is missing")
+			}
+
+			config := make(map[string]string)
+			config["name"] = "http"
+			config["server"] = args[0]
+			if len(args) > 1 {
+				config["user"] = args[1]
+				config["password"] = args[2]
+			}
+			rawConfig, err := json.Marshal(config)
+			if err != nil {
+				return d.Errf("failed to marshal config: %v", err)
+			}
+			h.ProxyRaw = rawConfig
 		}
 	}
 	return nil
