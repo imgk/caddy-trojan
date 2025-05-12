@@ -25,3 +25,7 @@
 Network Trash Folder
 Temporary Items
 .apdisk
+
+**/__debug_bin*
+.vscode/launch.json
+.vscode/Caddyfile

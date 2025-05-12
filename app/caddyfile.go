@@ -13,7 +13,7 @@ func init() {
 /*
 	trojan {
 		caddy
-		no_proxy | env_proxy
+		no_proxy | env_proxy | socks_proxy server user passwd | http_proxy server user passwd
 		users pass1234 word5678
 	}
 */
@@ -41,12 +41,50 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ interface{}) (interface{}, error) 
 				if app.ProxyRaw != nil {
 					return nil, d.Err("only one proxy is allowed")
 				}
-				app.ProxyRaw = caddyconfig.JSONModuleObject(new(EnvProxy), "proxy", "env_proxy", nil)
+				app.ProxyRaw = caddyconfig.JSONModuleObject(new(EnvProxy), "proxy", "env", nil)
 			case "no_proxy":
 				if app.ProxyRaw != nil {
 					return nil, d.Err("only one proxy is allowed")
 				}
-				app.ProxyRaw = caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "no_proxy", nil)
+				app.ProxyRaw = caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil)
+			case "socks_proxy":
+				if app.ProxyRaw != nil {
+					return nil, d.Err("only one proxy is allowed")
+				}
+
+				args := d.RemainingArgs()
+				if len(args) < 1 {
+					return nil, d.Err("server params is missing")
+				} else if len(args) == 2 {
+					return nil, d.Err("passwd params is missing")
+				}
+
+				socks := new(SocksProxy)
+				socks.Server = args[0]
+				if len(args) > 1 {
+					socks.User = args[1]
+					socks.Password = args[2]
+				}
+				app.ProxyRaw = caddyconfig.JSONModuleObject(socks, "proxy", "socks", nil)
+			case "http_proxy":
+				if app.ProxyRaw != nil {
+					return nil, d.Err("only one proxy is allowed")
+				}
+
+				args := d.RemainingArgs()
+				if len(args) < 1 {
+					return nil, d.Err("server params is missing")
+				} else if len(args) == 2 {
+					return nil, d.Err("passwd params is missing")
+				}
+
+				http := new(HttpProxy)
+				http.Server = args[0]
+				if len(args) > 1 {
+					http.User = args[1]
+					http.Password = args[2]
+				}
+				app.ProxyRaw = caddyconfig.JSONModuleObject(http, "proxy", "http", nil)
 			case "users":
 				args := d.RemainingArgs()
 				if len(args) < 1 {
