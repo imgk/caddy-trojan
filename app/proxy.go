@@ -18,7 +18,9 @@ import (
 
 func init() {
 	caddy.RegisterModule(NoProxy{})
+	caddy.RegisterModule(noProxy{})
 	caddy.RegisterModule(EnvProxy{})
+	caddy.RegisterModule(envProxy{})
 	caddy.RegisterModule(SocksProxy{})
 	caddy.RegisterModule(HttpProxy{})
 }
@@ -50,6 +52,17 @@ func (*NoProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 // Close is ...
 func (*NoProxy) Close() error {
 	return nil
+}
+
+type noProxy struct {
+	NoProxy
+}
+
+func (noProxy) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "trojan.proxy.no_proxy",
+		New: func() caddy.Module { return new(noProxy) },
+	}
 }
 
 // EnvProxy is ...
@@ -84,6 +97,17 @@ func (*EnvProxy) Close() error {
 // ListenPacket is ...
 func (*EnvProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 	return nil, errors.New("proxy from environment does not support UDP")
+}
+
+type envProxy struct {
+	EnvProxy
+}
+
+func (envProxy) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "trojan.proxy.env_proxy",
+		New: func() caddy.Module { return new(envProxy) },
+	}
 }
 
 // SocksProxy is a caddy module and supports socks5 proxy server.
