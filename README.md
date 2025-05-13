@@ -24,7 +24,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 		# socks_proxy server
 		# http_proxy server user passwd
 		# http_proxy server
-
+		# named_proxy proxy_name proxy_type args...
 		users pass1234 word5678
 	}
 }

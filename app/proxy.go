@@ -3,6 +3,7 @@ package app
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/net/proxy"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 
 	"github.com/imgk/caddy-trojan/pkgs/trojan"
 )
@@ -23,6 +25,50 @@ func init() {
 	caddy.RegisterModule(envProxy{})
 	caddy.RegisterModule(SocksProxy{})
 	caddy.RegisterModule(HttpProxy{})
+
+	RegisterProxyParser("no", func(args []string) (json.RawMessage, error) {
+		return caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil), nil
+	})
+
+	RegisterProxyParser("none", func(args []string) (json.RawMessage, error) {
+		return caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil), nil
+	})
+
+	RegisterProxyParser("env", func(args []string) (json.RawMessage, error) {
+		return caddyconfig.JSONModuleObject(new(EnvProxy), "proxy", "env", nil), nil
+	})
+
+	RegisterProxyParser("socks", func(args []string) (json.RawMessage, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("server params is missing")
+		} else if len(args) == 2 {
+			return nil, fmt.Errorf("passwd params is missing")
+		}
+
+		socks := new(SocksProxy)
+		socks.Server = args[0]
+		if len(args) > 1 {
+			socks.User = args[1]
+			socks.Password = args[2]
+		}
+		return caddyconfig.JSONModuleObject(socks, "proxy", "socks", nil), nil
+	})
+
+	RegisterProxyParser("http", func(args []string) (json.RawMessage, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("server params is missing")
+		} else if len(args) == 2 {
+			return nil, fmt.Errorf("passwd params is missing")
+		}
+
+		http := new(HttpProxy)
+		http.Server = args[0]
+		if len(args) > 1 {
+			http.User = args[1]
+			http.Password = args[2]
+		}
+		return caddyconfig.JSONModuleObject(http, "proxy", "http", nil), nil
+	})
 }
 
 // Proxy is ...
@@ -123,7 +169,7 @@ type SocksProxy struct {
 func (SocksProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.proxy.socks",
-		New: func() caddy.Module { return new(EnvProxy) },
+		New: func() caddy.Module { return new(SocksProxy) },
 	}
 }
 
@@ -178,7 +224,7 @@ type HttpProxy struct {
 func (HttpProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.proxy.http",
-		New: func() caddy.Module { return new(EnvProxy) },
+		New: func() caddy.Module { return new(HttpProxy) },
 	}
 }
 
