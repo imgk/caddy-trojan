@@ -2,11 +2,13 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 )
 
 func init() {
@@ -44,6 +46,11 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 					return nil, d.Err("only one upstream is allowed")
 				}
 				app.UpstreamRaw = caddyconfig.JSONModuleObject(new(MemoryUpstream), "upstream", "memory", nil)
+				var err error
+				app.UpstreamRaw, err = x.RemoveNullKeysFromJSON(app.UpstreamRaw)
+				if err != nil {
+					return nil, fmt.Errorf("remove null key error: %w", err)
+				}
 			case "no_proxy", "env_proxy", "socks_proxy", "http_proxy":
 				if app.ProxyRaw != nil {
 					return nil, d.Err("only one proxy is allowed")

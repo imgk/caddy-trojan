@@ -6,6 +6,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 	"go.uber.org/zap"
 )
 
@@ -50,6 +51,12 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 	if app.UpstreamRaw == nil {
 		app.UpstreamRaw = caddyconfig.JSONModuleObject(new(MemoryUpstream), "upstream", "memory", nil)
+
+		var err error
+		app.UpstreamRaw, err = x.RemoveNullKeysFromJSON(app.UpstreamRaw)
+		if err != nil {
+			return fmt.Errorf("remove null key error: %w", err)
+		}
 	}
 
 	mod, err := ctx.LoadModule(app, "UpstreamRaw")
