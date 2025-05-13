@@ -67,6 +67,10 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	}
 	app := mod.(*app.App)
 	m.Upstream = app.GetUpstream()
+	if m.ProxyName == "" {
+		m.Proxy = app.GetProxy()
+		return nil
+	}
 	var ok bool
 	m.Proxy, ok = app.GetProxyByName(m.ProxyName)
 	if !ok {
