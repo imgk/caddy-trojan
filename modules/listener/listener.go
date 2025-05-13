@@ -80,7 +80,25 @@ func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
 }
 
 // UnmarshalCaddyfile unmarshals Caddyfile tokens into h.
-func (*ListenerWrapper) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (m *ListenerWrapper) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	if !d.Next() {
+		return d.ArgErr()
+	}
+	args := d.RemainingArgs()
+	if len(args) > 0 {
+		return d.ArgErr()
+	}
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		subdirective := d.Val()
+		switch subdirective {
+		case "verbose":
+			m.Verbose = true
+		case "proxy_name":
+			if !d.Args(&m.ProxyName) {
+				return d.ArgErr()
+			}
+		}
+	}
 	return nil
 }
 

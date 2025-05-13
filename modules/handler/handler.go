@@ -161,6 +161,10 @@ func (h *Handler) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return d.Err("only one connect_method is not allowed")
 			}
 			h.Connect = true
+		case "proxy_name":
+			if !d.Args(&h.ProxyName) {
+				return d.ArgErr()
+			}
 		case "verbose":
 			if h.Verbose {
 				return d.Err("only one verbose is not allowed")
