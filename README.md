@@ -16,7 +16,7 @@ $ xcaddy build --with github.com/imgk/caddy-trojan
 	}
 	trojan {
 		caddy
-    # memory
+		# memory
 
 		no_proxy
 		# env_proxy

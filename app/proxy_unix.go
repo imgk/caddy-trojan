@@ -17,14 +17,19 @@ import (
 
 func init() {
 	caddy.RegisterModule(UnixProxy{})
-	RegisterProxyParser("unix", func(args []string) (json.RawMessage, error) {
+
+	fn := ProxyParser(nil)
+
+	fn = func(args []string) (json.RawMessage, error) {
 		if len(args) == 0 {
 			return nil, fmt.Errorf("empty path is not allowed")
 		}
 		uds := new(UnixProxy)
 		uds.Path = args[0]
 		return caddyconfig.JSONModuleObject(uds, "proxy", "unix", nil), nil
-	})
+	}
+	RegisterProxyParser("unix", fn)
+	RegisterProxyParser("unix_proxy", fn)
 }
 
 // UnixProxy is ...

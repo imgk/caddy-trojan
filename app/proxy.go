@@ -26,19 +26,21 @@ func init() {
 	caddy.RegisterModule(SocksProxy{})
 	caddy.RegisterModule(HttpProxy{})
 
-	RegisterProxyParser("no", func(args []string) (json.RawMessage, error) {
-		return caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil), nil
-	})
+	fn := ProxyParser(nil)
 
-	RegisterProxyParser("none", func(args []string) (json.RawMessage, error) {
+	fn = func(args []string) (json.RawMessage, error) {
 		return caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil), nil
-	})
+	}
+	RegisterProxyParser("none", fn)
+	RegisterProxyParser("no_proxy", fn)
 
-	RegisterProxyParser("env", func(args []string) (json.RawMessage, error) {
+	fn = func(args []string) (json.RawMessage, error) {
 		return caddyconfig.JSONModuleObject(new(EnvProxy), "proxy", "env", nil), nil
-	})
+	}
+	RegisterProxyParser("env", fn)
+	RegisterProxyParser("env_proxy", fn)
 
-	RegisterProxyParser("socks", func(args []string) (json.RawMessage, error) {
+	fn = func(args []string) (json.RawMessage, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("server params is missing")
 		} else if len(args) == 2 {
@@ -52,9 +54,11 @@ func init() {
 			socks.Password = args[2]
 		}
 		return caddyconfig.JSONModuleObject(socks, "proxy", "socks", nil), nil
-	})
+	}
+	RegisterProxyParser("socks", fn)
+	RegisterProxyParser("socks_proxy", fn)
 
-	RegisterProxyParser("http", func(args []string) (json.RawMessage, error) {
+	fn = func(args []string) (json.RawMessage, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("server params is missing")
 		} else if len(args) == 2 {
@@ -68,7 +72,9 @@ func init() {
 			http.Password = args[2]
 		}
 		return caddyconfig.JSONModuleObject(http, "proxy", "http", nil), nil
-	})
+	}
+	RegisterProxyParser("http", fn)
+	RegisterProxyParser("http_proxy", fn)
 }
 
 // Proxy is ...
