@@ -44,9 +44,9 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 				if app.UpstreamRaw != nil {
 					return nil, d.Err("only one upstream is allowed")
 				}
-				args := d.RemainingArgs()
 				mod := new(MemoryUpstream)
-				if len(args) == 0 {
+				if args := d.RemainingArgs(); len(args) == 0 {
+					app.UpstreamRaw = caddyconfig.JSONModuleObject(mod, "upstream", "memory", nil)
 					var err error
 					app.UpstreamRaw, err = x.RemoveNullKeysFromJSON(app.UpstreamRaw)
 					if err != nil {
@@ -55,11 +55,11 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 				} else {
 					if arg := args[0]; arg == "caddy" {
 						mod.UpstreamRaw = caddyconfig.JSONModuleObject(new(CaddyUpstream), "upstream", "caddy", nil)
+						app.UpstreamRaw = caddyconfig.JSONModuleObject(mod, "upstream", "memory", nil)
 					} else {
 						return nil, fmt.Errorf("unknown upstream module: %s", arg)
 					}
 				}
-				app.UpstreamRaw = caddyconfig.JSONModuleObject(mod, "upstream", "memory", nil)
 			case "no_proxy", "env_proxy", "socks_proxy", "http_proxy", "unix_proxy":
 				if app.ProxyRaw != nil {
 					return nil, d.Err("only one proxy is allowed")
