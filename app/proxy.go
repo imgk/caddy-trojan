@@ -75,6 +75,13 @@ func init() {
 	}
 	RegisterProxyParser("http", fn)
 	RegisterProxyParser("http_proxy", fn)
+
+	fn = func(args []string) (json.RawMessage, error) {
+		return caddyconfig.JSONModuleObject(new(DropProxy), "proxy", "drop", nil), nil
+	}
+	RegisterProxyParser("drop", fn)
+	RegisterProxyParser("drop_proxy", fn)
+
 }
 
 // Proxy is ...
@@ -292,6 +299,23 @@ func (p *HttpProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 	return nil, errors.New("does not support UDP for http proxy")
 }
 
+type DropProxy struct{}
+
+func (DropProxy) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "trojan.proxy.drop",
+		New: func() caddy.Module { return new(DropProxy) },
+	}
+}
+
+func (*DropProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
+	return 0, 0, nil
+}
+
+func (*DropProxy) Close() error {
+	return nil
+}
+
 var (
 	_ Proxy             = (*NoProxy)(nil)
 	_ caddy.Provisioner = (*EnvProxy)(nil)
@@ -303,4 +327,5 @@ var (
 	_ caddy.Provisioner = (*HttpProxy)(nil)
 	_ Proxy             = (*HttpProxy)(nil)
 	_ trojan.Dialer     = (*HttpProxy)(nil)
+	_ Proxy             = (*DropProxy)(nil)
 )
