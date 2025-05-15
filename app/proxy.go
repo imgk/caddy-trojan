@@ -9,12 +9,14 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 
 	"golang.org/x/net/proxy"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 
+	"github.com/imgk/caddy-trojan/pkgs/domaintree"
 	"github.com/imgk/caddy-trojan/pkgs/trojan"
 )
 
@@ -25,6 +27,8 @@ func init() {
 	caddy.RegisterModule(envProxy{})
 	caddy.RegisterModule(SocksProxy{})
 	caddy.RegisterModule(HttpProxy{})
+	caddy.RegisterModule(DropProxy{})
+	caddy.RegisterModule((*BlockDomain)(nil))
 
 	fn := ProxyParser(nil)
 
@@ -90,6 +94,8 @@ type Proxy interface {
 	Handle(r io.Reader, w io.Writer) (int64, int64, error)
 	// Closer is ...
 	io.Closer
+
+	trojan.Dialer
 }
 
 // NoProxy is ...
@@ -113,6 +119,14 @@ func (*NoProxy) Close() error {
 	return nil
 }
 
+func (*NoProxy) Dial(network, addr string) (net.Conn, error) {
+	return net.Dial(network, addr)
+}
+
+func (*NoProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
+	return net.ListenPacket(network, addr)
+}
+
 type noProxy struct {
 	NoProxy
 }
@@ -126,7 +140,7 @@ func (noProxy) CaddyModule() caddy.ModuleInfo {
 
 // EnvProxy is ...
 type EnvProxy struct {
-	proxy.Dialer `json:"-,omitempty"`
+	dialer proxy.Dialer
 }
 
 // CaddyModule is ...
@@ -139,7 +153,7 @@ func (EnvProxy) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (p *EnvProxy) Provision(ctx caddy.Context) error {
-	p.Dialer = proxy.FromEnvironment()
+	p.dialer = proxy.FromEnvironment()
 	return nil
 }
 
@@ -151,6 +165,10 @@ func (p *EnvProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
 // Close is ...
 func (*EnvProxy) Close() error {
 	return nil
+}
+
+func (p *EnvProxy) Dial(network, addr string) (net.Conn, error) {
+	return p.dialer.Dial(network, addr)
 }
 
 // ListenPacket is ...
@@ -316,6 +334,88 @@ func (*DropProxy) Close() error {
 	return nil
 }
 
+func (*DropProxy) Dial(network, addr string) (net.Conn, error) {
+	return net.Dial(network, addr)
+}
+
+func (*DropProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
+	return net.ListenPacket(network, addr)
+}
+
+type BlockDomain struct {
+	ProxyRaw   json.RawMessage `json:"proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
+	DomainList []string        `json:"domain_list,omitempty"`
+
+	sync.RWMutex
+	proxy Proxy
+	node  domaintree.Node
+}
+
+func (*BlockDomain) CaddyModule() caddy.ModuleInfo {
+	return caddy.ModuleInfo{
+		ID:  "trojan.proxy.block_domain",
+		New: func() caddy.Module { return new(BlockDomain) },
+	}
+}
+
+func (p *BlockDomain) Provision(ctx caddy.Context) error {
+	if p.ProxyRaw == nil {
+		p.ProxyRaw = caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil)
+	}
+
+	mod, err := ctx.LoadModule(p, "ProxyRaw")
+	if err != nil {
+		return err
+	}
+	p.proxy = mod.(Proxy)
+
+	p.node = domaintree.NewNode()
+	for _, domain := range p.DomainList {
+		p.node.Put(domain)
+	}
+	return nil
+}
+
+func (p *BlockDomain) Close() error {
+	return nil
+}
+
+func (p *BlockDomain) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
+	return trojan.HandleWithDialer(r, w, p)
+}
+
+func (d *BlockDomain) Dial(network, addr string) (net.Conn, error) {
+	address, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("dial %s error: %w", addr, err)
+	}
+	if d.Exist(address) {
+		return nil, errors.New("blocked domain")
+	}
+	return d.proxy.Dial(network, addr)
+}
+
+func (d *BlockDomain) ListenPacket(network, addr string) (net.PacketConn, error) {
+	address, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		if addr != "" {
+			return nil, err
+		}
+		return net.ListenPacket(network, addr)
+	}
+	if d.Exist(address) {
+		return nil, errors.New("blocked domain")
+	}
+	return d.proxy.ListenPacket(network, addr)
+}
+
+func (d *BlockDomain) Exist(domain string) bool {
+	d.RLock()
+	ok := d.node.Get(domain)
+	d.RUnlock()
+	return ok
+}
+
 var (
 	_ Proxy             = (*NoProxy)(nil)
 	_ caddy.Provisioner = (*EnvProxy)(nil)
@@ -328,4 +428,6 @@ var (
 	_ Proxy             = (*HttpProxy)(nil)
 	_ trojan.Dialer     = (*HttpProxy)(nil)
 	_ Proxy             = (*DropProxy)(nil)
+	_ Proxy             = (*BlockDomain)(nil)
+	_ caddy.Provisioner = (*BlockDomain)(nil)
 )

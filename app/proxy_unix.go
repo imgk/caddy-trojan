@@ -12,6 +12,7 @@ import (
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
+
 	"github.com/imgk/caddy-trojan/pkgs/trojan"
 )
 
@@ -79,7 +80,7 @@ func (u *UnixProxy) Dial(network, addr string) (net.Conn, error) {
 
 // ListenPacket is ...
 func (*UnixProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
-	return nil, errors.New("unix proxy currently does not support UDP.")
+	return nil, errors.New("unix proxy currently does not support UDP")
 }
 
 // writeTrojanUnixHandshake writes the initial handshake header to a UNIX socket connection.

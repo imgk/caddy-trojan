@@ -28,11 +28,11 @@ func init() {
 // failed.
 type ListenerWrapper struct {
 	// Upstream is ...
-	Upstream app.Upstream `json:"-,omitempty"`
+	upstream app.Upstream
 	// Proxy is ...
-	Proxy app.Proxy `json:"-,omitempty"`
+	proxy app.Proxy
 	// Logger is ...
-	Logger *zap.Logger `json:"-,omitempty"`
+	logger *zap.Logger
 
 	ProxyName string `json:"proxy_name,omitempty"`
 	// Verbose is ...
@@ -49,7 +49,7 @@ func (ListenerWrapper) CaddyModule() caddy.ModuleInfo {
 
 // Provision implements caddy.Provisioner.
 func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
-	m.Logger = ctx.Logger(m)
+	m.logger = ctx.Logger(m)
 	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
 		return fmt.Errorf("trojan configure error: %w", err)
 	}
@@ -58,13 +58,13 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 		return err
 	}
 	app := mod.(*app.App)
-	m.Upstream = app.GetUpstream()
+	m.upstream = app.GetUpstream()
 	if m.ProxyName == "" {
-		m.Proxy = app.GetProxy()
+		m.proxy = app.GetProxy()
 		return nil
 	}
 	var ok bool
-	m.Proxy, ok = app.GetProxyByName(m.ProxyName)
+	m.proxy, ok = app.GetProxyByName(m.ProxyName)
 	if !ok {
 		return fmt.Errorf("proxy name: %v does not exist", m.ProxyName)
 	}
@@ -73,7 +73,7 @@ func (m *ListenerWrapper) Provision(ctx caddy.Context) error {
 
 // WrapListener implements caddy.ListenWrapper
 func (m *ListenerWrapper) WrapListener(l net.Listener) net.Listener {
-	ln := NewListener(l, m.Upstream, m.Proxy, m.Logger)
+	ln := NewListener(l, m.upstream, m.proxy, m.logger)
 	ln.Verbose = m.Verbose
 	go ln.loop()
 	return ln

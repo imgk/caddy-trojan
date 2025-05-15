@@ -28,9 +28,9 @@ type App struct {
 	// Users is ...
 	Users []string `json:"users,omitempty"`
 
-	Upstream   `json:"-,omitempty"`
-	Proxy      `json:"-,omitempty"`
-	NamedProxy map[string]Proxy `json:"-,omitempty"`
+	upstream   Upstream
+	proxy      Proxy
+	namedProxy map[string]Proxy
 
 	lg *zap.Logger
 }
@@ -63,27 +63,27 @@ func (app *App) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
-	app.Upstream = mod.(Upstream)
+	app.upstream = mod.(Upstream)
 
 	mod, err = ctx.LoadModule(app, "ProxyRaw")
 	if err != nil {
 		return err
 	}
-	app.Proxy = mod.(Proxy)
+	app.proxy = mod.(Proxy)
 
-	app.NamedProxy = make(map[string]Proxy)
+	app.namedProxy = make(map[string]Proxy)
 	if app.NamedProxyRaw != nil {
 		vals, err := ctx.LoadModule(app, "NamedProxyRaw")
 		if err != nil {
 			return fmt.Errorf("loading trojan.proxy modules: %w", err)
 		}
 		for fieldName, modIface := range vals.(map[string]any) {
-			app.NamedProxy[fieldName] = modIface.(Proxy)
+			app.namedProxy[fieldName] = modIface.(Proxy)
 		}
 	}
 
 	for _, v := range app.Users {
-		app.Upstream.Add(v)
+		app.upstream.Add(v)
 	}
 
 	app.lg = ctx.Logger(app)
@@ -98,21 +98,21 @@ func (app *App) Start() error {
 
 // Stop is ...
 func (app *App) Stop() error {
-	return app.Proxy.Close()
+	return app.proxy.Close()
 }
 
 // Upstream is ...
 func (app *App) GetUpstream() Upstream {
-	return app
+	return app.upstream
 }
 
 // Proxy is ...
 func (app *App) GetProxy() Proxy {
-	return app
+	return app.proxy
 }
 
 func (app *App) GetProxyByName(name string) (Proxy, bool) {
-	v, ok := app.NamedProxy[name]
+	v, ok := app.namedProxy[name]
 	return v, ok
 }
 

@@ -28,7 +28,6 @@ func parseCaddyfile(d *caddyfile.Dispenser, _ any) (any, error) {
 		ProxyRaw:      nil,
 		NamedProxyRaw: map[string]json.RawMessage{},
 		Users:         []string{},
-		NamedProxy:    map[string]Proxy{},
 	}
 
 	for d.Next() {

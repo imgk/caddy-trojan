@@ -17,7 +17,7 @@ import (
 
 func init() {
 	caddy.RegisterModule(CaddyUpstream{})
-	caddy.RegisterModule(MemoryUpstream{})
+	caddy.RegisterModule((*MemoryUpstream)(nil))
 }
 
 // Upstream is ...
@@ -66,7 +66,7 @@ type MemoryUpstream struct {
 }
 
 // CaddyModule is ...
-func (MemoryUpstream) CaddyModule() caddy.ModuleInfo {
+func (*MemoryUpstream) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.upstream.memory",
 		New: func() caddy.Module { return new(MemoryUpstream) },
@@ -213,11 +213,11 @@ func (u *MemoryUpstream) Consume(k string, nr, nw int64) error {
 // CaddyUpstream is ...
 type CaddyUpstream struct {
 	// Prefix is ...
-	Prefix string `json:"-,omitempty"`
+	prefix string
 	// Storage is ...
-	Storage certmagic.Storage `json:"-,omitempty"`
+	storage certmagic.Storage
 	// Logger is ...
-	Logger *zap.Logger `json:"-,omitempty"`
+	logger *zap.Logger
 }
 
 // CaddyModule is ...
@@ -230,9 +230,9 @@ func (CaddyUpstream) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (u *CaddyUpstream) Provision(ctx caddy.Context) error {
-	u.Prefix = "trojan/"
-	u.Storage = ctx.Storage()
-	u.Logger = ctx.Logger(u)
+	u.prefix = "trojan/"
+	u.storage = ctx.Storage()
+	u.logger = ctx.Logger(u)
 	return nil
 }
 
@@ -240,8 +240,8 @@ func (u *CaddyUpstream) Provision(ctx caddy.Context) error {
 func (u *CaddyUpstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := u.Prefix + string(b[:])
-	if u.Storage.Exists(context.Background(), key) {
+	key := u.prefix + string(b[:])
+	if u.storage.Exists(context.Background(), key) {
 		return nil
 	}
 	traffic := Traffic{
@@ -252,56 +252,56 @@ func (u *CaddyUpstream) Add(s string) error {
 	if err != nil {
 		return err
 	}
-	return u.Storage.Store(context.Background(), key, bb)
+	return u.storage.Store(context.Background(), key, bb)
 }
 
 // Delete is ...
 func (u *CaddyUpstream) Delete(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
-	key := u.Prefix + x.ByteSliceToString(b[:])
-	if !u.Storage.Exists(context.Background(), key) {
+	key := u.prefix + x.ByteSliceToString(b[:])
+	if !u.storage.Exists(context.Background(), key) {
 		return nil
 	}
-	return u.Storage.Delete(context.Background(), key)
+	return u.storage.Delete(context.Background(), key)
 }
 
 // Range is ...
 func (u *CaddyUpstream) Range(fn func(k string, up, down int64)) {
-	prekeys, err := u.Storage.List(context.Background(), u.Prefix, false)
+	prekeys, err := u.storage.List(context.Background(), u.prefix, false)
 	if err != nil {
 		return
 	}
 
 	traffic := Traffic{}
 	for _, k := range prekeys {
-		b, err := u.Storage.Load(context.Background(), k)
+		b, err := u.storage.Load(context.Background(), k)
 		if err != nil {
-			u.Logger.Error(fmt.Sprintf("load user error: %v", err))
+			u.logger.Error(fmt.Sprintf("load user error: %v", err))
 			continue
 		}
 		if err := json.Unmarshal(b, &traffic); err != nil {
-			u.Logger.Error(fmt.Sprintf("load user error: %v", err))
+			u.logger.Error(fmt.Sprintf("load user error: %v", err))
 			continue
 		}
-		fn(strings.TrimPrefix(k, u.Prefix), traffic.Up, traffic.Down)
+		fn(strings.TrimPrefix(k, u.prefix), traffic.Up, traffic.Down)
 	}
 }
 
 // Validate is ...
 func (u *CaddyUpstream) Validate(k string) bool {
-	key := u.Prefix + k
-	return u.Storage.Exists(context.Background(), key)
+	key := u.prefix + k
+	return u.storage.Exists(context.Background(), key)
 }
 
 // Consume is ...
 func (u *CaddyUpstream) Consume(k string, nr, nw int64) error {
-	key := u.Prefix + k
+	key := u.prefix + k
 
-	u.Storage.Lock(context.Background(), key)
-	defer u.Storage.Unlock(context.Background(), key)
+	u.storage.Lock(context.Background(), key)
+	defer u.storage.Unlock(context.Background(), key)
 
-	b, err := u.Storage.Load(context.Background(), key)
+	b, err := u.storage.Load(context.Background(), key)
 	if err != nil {
 		return err
 	}
@@ -319,7 +319,7 @@ func (u *CaddyUpstream) Consume(k string, nr, nw int64) error {
 		return err
 	}
 
-	return u.Storage.Store(context.Background(), key, b)
+	return u.storage.Store(context.Background(), key, b)
 }
 
 var (
