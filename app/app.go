@@ -14,19 +14,13 @@ func init() {
 	caddy.RegisterModule(App{})
 }
 
-// CaddyAppID is ...
 const CaddyAppID = "trojan"
 
-// App is ...
 type App struct {
-	// UpstreamRaw is ...
-	UpstreamRaw json.RawMessage `json:"upstream" caddy:"namespace=trojan.upstream inline_key=upstream"`
-	// ProxyRaw is ...
-	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
-	// NamedProxyRaw is ...
+	UpstreamRaw   json.RawMessage            `json:"upstream" caddy:"namespace=trojan.upstream inline_key=upstream"`
+	ProxyRaw      json.RawMessage            `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
 	NamedProxyRaw map[string]json.RawMessage `json:"named_proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
-	// Users is ...
-	Users []string `json:"users,omitempty"`
+	Users         []string                   `json:"users,omitempty"`
 
 	upstream   Upstream
 	proxy      Proxy
@@ -35,7 +29,6 @@ type App struct {
 	lg *zap.Logger
 }
 
-// CaddyModule is ...
 func (App) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  CaddyAppID,
@@ -43,7 +36,6 @@ func (App) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision is ...
 func (app *App) Provision(ctx caddy.Context) error {
 	if app.ProxyRaw == nil {
 		app.ProxyRaw = caddyconfig.JSONModuleObject(new(NoProxy), "proxy", "none", nil)
@@ -91,29 +83,25 @@ func (app *App) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Start is ...
 func (app *App) Start() error {
 	return nil
 }
 
-// Stop is ...
 func (app *App) Stop() error {
 	return app.proxy.Close()
 }
 
-// Upstream is ...
 func (app *App) GetUpstream() Upstream {
 	return app.upstream
 }
 
-// Proxy is ...
 func (app *App) GetProxy() Proxy {
 	return app.proxy
 }
 
 func (app *App) GetProxyByName(name string) (Proxy, bool) {
-	v, ok := app.namedProxy[name]
-	return v, ok
+	proxy, ok := app.namedProxy[name]
+	return proxy, ok
 }
 
 var (

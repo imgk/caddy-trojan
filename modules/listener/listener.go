@@ -27,12 +27,9 @@ func init() {
 // and aead cipher defined by go-shadowsocks2, and return a normal page if
 // failed.
 type ListenerWrapper struct {
-	// Upstream is ...
 	upstream app.Upstream
-	// Proxy is ...
-	proxy app.Proxy
-	// Logger is ...
-	logger *zap.Logger
+	proxy    app.Proxy
+	logger   *zap.Logger
 
 	ProxyName string `json:"proxy_name,omitempty"`
 	// Verbose is ...
@@ -109,22 +106,15 @@ var (
 	_ caddyfile.Unmarshaler = (*ListenerWrapper)(nil)
 )
 
-// Listener is ...
 type Listener struct {
 	Verbose bool
 
-	// Listener is ...
 	net.Listener
-	// Upstream is ...
 	Upstream app.Upstream
-	// Proxy is ...
-	Proxy app.Proxy
-	// Logger is ...
-	Logger *zap.Logger
+	Proxy    app.Proxy
+	Logger   *zap.Logger
 
-	// return *rawConn
-	conns chan net.Conn
-	// close channel
+	conns  chan net.Conn
 	closed chan struct{}
 }
 
@@ -221,7 +211,7 @@ func (l *Listener) loop() {
 				lg.Info(fmt.Sprintf("handle trojan net.Conn from %v", c.RemoteAddr()))
 			}
 
-			nr, nw, err := l.Proxy.Handle(io.Reader(c), io.Writer(c))
+			nr, nw, err := trojan.HandleWithDialer(io.Reader(c), io.Writer(c), l.Proxy)
 			if err != nil {
 				lg.Error(fmt.Sprintf("handle net.Conn error: %v", err))
 			}

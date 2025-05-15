@@ -20,21 +20,14 @@ func init() {
 	caddy.RegisterModule((*MemoryUpstream)(nil))
 }
 
-// Upstream is ...
 type Upstream interface {
-	// Add is ...
 	Add(string) error
-	// Delete is ...
 	Delete(string) error
-	// Range is ...
 	Range(func(string, int64, int64))
-	// Validate is ...
 	Validate(string) bool
-	// Consume is ...
 	Consume(string, int64, int64) error
 }
 
-// TaskType is ...
 type TaskType int
 
 const (
@@ -43,7 +36,6 @@ const (
 	TaskConsume
 )
 
-// Task is ...
 type Task struct {
 	Type  TaskType
 	Value struct {
@@ -53,9 +45,7 @@ type Task struct {
 	}
 }
 
-// MemoryUpstream is ...
 type MemoryUpstream struct {
-	// UpstreamRaw is ...
 	UpstreamRaw json.RawMessage `json:"persist" caddy:"namespace=trojan.upstream inline_key=upstream"`
 
 	ch chan Task
@@ -65,7 +55,6 @@ type MemoryUpstream struct {
 	mm map[string]Traffic
 }
 
-// CaddyModule is ...
 func (*MemoryUpstream) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.upstream.memory",
@@ -73,7 +62,6 @@ func (*MemoryUpstream) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision is ...
 func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 	u.mm = make(map[string]Traffic)
 
@@ -117,7 +105,6 @@ func (u *MemoryUpstream) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Cleanup is ...
 func (u *MemoryUpstream) Cleanup() error {
 	if u.ch == nil {
 		return nil
@@ -126,7 +113,6 @@ func (u *MemoryUpstream) Cleanup() error {
 	return nil
 }
 
-// Add is ...
 func (u *MemoryUpstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
@@ -143,7 +129,6 @@ func (u *MemoryUpstream) Add(s string) error {
 	return nil
 }
 
-// AddKey is ...
 func (u *MemoryUpstream) AddKey(key string) {
 	u.mu.Lock()
 	u.mm[key] = Traffic{
@@ -153,7 +138,6 @@ func (u *MemoryUpstream) AddKey(key string) {
 	u.mu.Unlock()
 }
 
-// Delete is ...
 func (u *MemoryUpstream) Delete(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
@@ -172,7 +156,6 @@ func (u *MemoryUpstream) Delete(s string) error {
 	return nil
 }
 
-// Range is ...
 func (u *MemoryUpstream) Range(fn func(string, int64, int64)) {
 	u.mu.RLock()
 	for k, v := range u.mm {
@@ -181,7 +164,6 @@ func (u *MemoryUpstream) Range(fn func(string, int64, int64)) {
 	u.mu.RUnlock()
 }
 
-// Validate is ...
 func (u *MemoryUpstream) Validate(k string) bool {
 	u.mu.RLock()
 	_, ok := u.mm[k]
@@ -189,7 +171,6 @@ func (u *MemoryUpstream) Validate(k string) bool {
 	return ok
 }
 
-// Consume is ...
 func (u *MemoryUpstream) Consume(k string, nr, nw int64) error {
 	u.mu.Lock()
 	traffic := u.mm[k]
@@ -210,17 +191,12 @@ func (u *MemoryUpstream) Consume(k string, nr, nw int64) error {
 	return nil
 }
 
-// CaddyUpstream is ...
 type CaddyUpstream struct {
-	// Prefix is ...
-	prefix string
-	// Storage is ...
+	prefix  string
 	storage certmagic.Storage
-	// Logger is ...
-	logger *zap.Logger
+	logger  *zap.Logger
 }
 
-// CaddyModule is ...
 func (CaddyUpstream) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.upstream.caddy",
@@ -228,7 +204,6 @@ func (CaddyUpstream) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision is ...
 func (u *CaddyUpstream) Provision(ctx caddy.Context) error {
 	u.prefix = "trojan/"
 	u.storage = ctx.Storage()
@@ -236,7 +211,6 @@ func (u *CaddyUpstream) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Add is ...
 func (u *CaddyUpstream) Add(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
@@ -255,7 +229,6 @@ func (u *CaddyUpstream) Add(s string) error {
 	return u.storage.Store(context.Background(), key, bb)
 }
 
-// Delete is ...
 func (u *CaddyUpstream) Delete(s string) error {
 	b := [trojan.HeaderLen]byte{}
 	trojan.GenKey(s, b[:])
@@ -266,7 +239,6 @@ func (u *CaddyUpstream) Delete(s string) error {
 	return u.storage.Delete(context.Background(), key)
 }
 
-// Range is ...
 func (u *CaddyUpstream) Range(fn func(k string, up, down int64)) {
 	prekeys, err := u.storage.List(context.Background(), u.prefix, false)
 	if err != nil {
@@ -288,13 +260,11 @@ func (u *CaddyUpstream) Range(fn func(k string, up, down int64)) {
 	}
 }
 
-// Validate is ...
 func (u *CaddyUpstream) Validate(k string) bool {
 	key := u.prefix + k
 	return u.storage.Exists(context.Background(), key)
 }
 
-// Consume is ...
 func (u *CaddyUpstream) Consume(k string, nr, nw int64) error {
 	key := u.prefix + k
 

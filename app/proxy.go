@@ -88,20 +88,13 @@ func init() {
 
 }
 
-// Proxy is ...
 type Proxy interface {
-	// Handle is ...
-	Handle(r io.Reader, w io.Writer) (int64, int64, error)
-	// Closer is ...
 	io.Closer
-
 	trojan.Dialer
 }
 
-// NoProxy is ...
 type NoProxy struct{}
 
-// CaddyModule is ...
 func (NoProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.proxy.none",
@@ -109,12 +102,6 @@ func (NoProxy) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Handle is ...
-func (*NoProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return trojan.Handle(r, w)
-}
-
-// Close is ...
 func (*NoProxy) Close() error {
 	return nil
 }
@@ -138,12 +125,10 @@ func (noProxy) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// EnvProxy is ...
 type EnvProxy struct {
 	dialer proxy.Dialer
 }
 
-// CaddyModule is ...
 func (EnvProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.proxy.env",
@@ -151,18 +136,11 @@ func (EnvProxy) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision is ...
 func (p *EnvProxy) Provision(ctx caddy.Context) error {
 	p.dialer = proxy.FromEnvironment()
 	return nil
 }
 
-// Handle is ...
-func (p *EnvProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return trojan.HandleWithDialer(r, w, p)
-}
-
-// Close is ...
 func (*EnvProxy) Close() error {
 	return nil
 }
@@ -171,7 +149,6 @@ func (p *EnvProxy) Dial(network, addr string) (net.Conn, error) {
 	return p.dialer.Dial(network, addr)
 }
 
-// ListenPacket is ...
 func (*EnvProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 	return nil, errors.New("proxy from environment does not support UDP")
 }
@@ -225,10 +202,6 @@ func (p *SocksProxy) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-func (p *SocksProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return trojan.HandleWithDialer(r, w, p)
-}
-
 func (p *SocksProxy) Close() error {
 	return nil
 }
@@ -273,10 +246,6 @@ func (p *HttpProxy) Provision(ctx caddy.Context) error {
 	p.tcpURL = fmt.Sprintf("http://%s", p.Server)
 
 	return nil
-}
-
-func (p *HttpProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return trojan.HandleWithDialer(r, w, p)
 }
 
 func (p *HttpProxy) Close() error {
@@ -326,20 +295,16 @@ func (DropProxy) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-func (*DropProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return 0, 0, nil
-}
-
 func (*DropProxy) Close() error {
 	return nil
 }
 
 func (*DropProxy) Dial(network, addr string) (net.Conn, error) {
-	return net.Dial(network, addr)
+	return nil, errors.New("drop connection")
 }
 
 func (*DropProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
-	return net.ListenPacket(network, addr)
+	return nil, errors.New("drop connection")
 }
 
 type BlockDomain struct {
@@ -380,10 +345,6 @@ func (p *BlockDomain) Close() error {
 	return nil
 }
 
-func (p *BlockDomain) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return trojan.HandleWithDialer(r, w, p)
-}
-
 func (d *BlockDomain) Dial(network, addr string) (net.Conn, error) {
 	address, _, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -398,10 +359,10 @@ func (d *BlockDomain) Dial(network, addr string) (net.Conn, error) {
 func (d *BlockDomain) ListenPacket(network, addr string) (net.PacketConn, error) {
 	address, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		if addr != "" {
-			return nil, err
+		if addr == "" {
+			return d.proxy.ListenPacket(network, addr)
 		}
-		return net.ListenPacket(network, addr)
+		return nil, fmt.Errorf("listenPacket %s error: %w", addr, err)
 	}
 	if d.Exist(address) {
 		return nil, errors.New("blocked domain")
@@ -420,14 +381,11 @@ var (
 	_ Proxy             = (*NoProxy)(nil)
 	_ caddy.Provisioner = (*EnvProxy)(nil)
 	_ Proxy             = (*EnvProxy)(nil)
-	_ trojan.Dialer     = (*EnvProxy)(nil)
 	_ caddy.Provisioner = (*SocksProxy)(nil)
 	_ Proxy             = (*SocksProxy)(nil)
-	_ trojan.Dialer     = (*SocksProxy)(nil)
 	_ caddy.Provisioner = (*HttpProxy)(nil)
 	_ Proxy             = (*HttpProxy)(nil)
-	_ trojan.Dialer     = (*HttpProxy)(nil)
 	_ Proxy             = (*DropProxy)(nil)
-	_ Proxy             = (*BlockDomain)(nil)
 	_ caddy.Provisioner = (*BlockDomain)(nil)
+	_ Proxy             = (*BlockDomain)(nil)
 )

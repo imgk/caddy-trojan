@@ -37,13 +37,9 @@ type Handler struct {
 	Connect   bool   `json:"connect_method,omitempty"`
 	Verbose   bool   `json:"verbose,omitempty"`
 
-	// Upstream is ...
 	upstream app.Upstream
-	// Proxy is ...
-	proxy app.Proxy
-	// Logger is ...
-	logger *zap.Logger
-	// Upgrader is ...
+	proxy    app.Proxy
+	logger   *zap.Logger
 	upgrader websocket.Upgrader
 }
 
@@ -99,7 +95,7 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.logger.Info(fmt.Sprintf("handle trojan http%d from %v", r.ProtoMajor, r.RemoteAddr))
 		}
 
-		nr, nw, err := m.proxy.Handle(r.Body, NewFlushWriter(w))
+		nr, nw, err := trojan.HandleWithDialer(r.Body, NewFlushWriter(w), m.proxy)
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle http%d error: %v", r.ProtoMajor, err))
 		}
@@ -129,13 +125,14 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			m.logger.Info(fmt.Sprintf("handle trojan websocket.Conn from %v", r.RemoteAddr))
 		}
 
-		nr, nw, err := m.proxy.Handle(io.Reader(c), io.Writer(c))
+		nr, nw, err := trojan.HandleWithDialer(io.Reader(c), io.Writer(c), m.proxy)
 		if err != nil {
 			m.logger.Error(fmt.Sprintf("handle websocket error: %v", err))
 		}
 		m.upstream.Consume(x.ByteSliceToString(b[:trojan.HeaderLen]), nr, nw)
 		return nil
 	}
+
 	return next.ServeHTTP(w, r)
 }
 

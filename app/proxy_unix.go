@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"strconv"
 
@@ -33,12 +32,10 @@ func init() {
 	RegisterProxyParser("unix_proxy", fn)
 }
 
-// UnixProxy is ...
 type UnixProxy struct {
 	Path string `json:"path"`
 }
 
-// CaddyModule is ...
 func (UnixProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "trojan.proxy.unix",
@@ -53,12 +50,6 @@ func (u *UnixProxy) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Handle is ...
-func (p *UnixProxy) Handle(r io.Reader, w io.Writer) (int64, int64, error) {
-	return trojan.HandleWithDialer(r, w, p)
-}
-
-// Close is ...
 func (*UnixProxy) Close() error {
 	return nil
 }
@@ -78,7 +69,6 @@ func (u *UnixProxy) Dial(network, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
-// ListenPacket is ...
 func (*UnixProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 	return nil, errors.New("unix proxy currently does not support UDP")
 }
