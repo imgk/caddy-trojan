@@ -32,8 +32,7 @@ type ListenerWrapper struct {
 	logger   *zap.Logger
 
 	ProxyName string `json:"proxy_name,omitempty"`
-	// Verbose is ...
-	Verbose bool `json:"verbose,omitempty"`
+	Verbose   bool   `json:"verbose,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -118,7 +117,6 @@ type Listener struct {
 	closed chan struct{}
 }
 
-// NewListener is ...
 func NewListener(ln net.Listener, up app.Upstream, px app.Proxy, logger *zap.Logger) *Listener {
 	l := &Listener{
 		Listener: ln,
@@ -131,7 +129,6 @@ func NewListener(ln net.Listener, up app.Upstream, px app.Proxy, logger *zap.Log
 	return l
 }
 
-// Accept is ...
 func (l *Listener) Accept() (net.Conn, error) {
 	select {
 	case <-l.closed:
@@ -141,7 +138,6 @@ func (l *Listener) Accept() (net.Conn, error) {
 	}
 }
 
-// Close is ...
 func (l *Listener) Close() error {
 	select {
 	case <-l.closed:
@@ -152,7 +148,6 @@ func (l *Listener) Close() error {
 	return nil
 }
 
-// loop is ...
 func (l *Listener) loop() {
 	for {
 		conn, err := l.Listener.Accept()

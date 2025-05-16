@@ -12,32 +12,24 @@ import (
 const MaxAddrLen = 1 + 1 + 255 + 2
 
 var (
-	// ErrInvalidAddrType is ...
 	ErrInvalidAddrType = errors.New("invalid address type")
-	// ErrInvalidAddrLen is ...
-	ErrInvalidAddrLen = errors.New("invalid address length")
+	ErrInvalidAddrLen  = errors.New("invalid address length")
 )
 
 const (
-	// AddrTypeIPv4 is ...
-	AddrTypeIPv4 = 1
-	// AddrTypeDomain is ...
+	AddrTypeIPv4   = 1
 	AddrTypeDomain = 3
-	// AddrTypeIPv6 is ...
-	AddrTypeIPv6 = 4
+	AddrTypeIPv6   = 4
 )
 
-// Addr is ...
 type Addr struct {
 	data []byte
 }
 
-// Network is ...
 func (*Addr) Network() string {
 	return "socks"
 }
 
-// String is ...
 func (addr *Addr) String() string {
 	switch addr.data[0] {
 	case AddrTypeIPv4:
@@ -57,32 +49,26 @@ func (addr *Addr) String() string {
 	}
 }
 
-// Len is ...
 func (addr *Addr) Len() int {
 	return len(addr.data)
 }
 
-// AppendTo is ...
 func (addr *Addr) AppendTo(b []byte) []byte {
 	return append(b, addr.data...)
 }
 
-// Bytes is ...
 func (addr *Addr) Bytes() []byte {
 	return addr.data
 }
 
-// Append is ...
 func (addr *Addr) Append(b []byte) []byte {
 	return append(addr.data, b...)
 }
 
-// ReadAddr is ....
 func ReadAddr(conn io.Reader) (*Addr, error) {
 	return ReadAddrBuffer(conn, make([]byte, MaxAddrLen))
 }
 
-// ReadAddrBuffer is ...
 func ReadAddrBuffer(conn io.Reader, addr []byte) (*Addr, error) {
 	_, err := io.ReadFull(conn, addr[:2])
 	if err != nil {
@@ -119,7 +105,6 @@ func ReadAddrBuffer(conn io.Reader, addr []byte) (*Addr, error) {
 	}
 }
 
-// ParseAddr is ...
 func ParseAddr(addr []byte) (*Addr, error) {
 	if len(addr) < 1+1+1+2 {
 		return nil, ErrInvalidAddrLen
@@ -152,7 +137,6 @@ func ParseAddr(addr []byte) (*Addr, error) {
 	}
 }
 
-// ResolveTCPAddr is ...
 func ResolveTCPAddr(addr *Addr) (*net.TCPAddr, error) {
 	switch addr.data[0] {
 	case AddrTypeIPv4:
@@ -170,7 +154,6 @@ func ResolveTCPAddr(addr *Addr) (*net.TCPAddr, error) {
 	}
 }
 
-// ResolveUDPAddr is ...
 func ResolveUDPAddr(addr *Addr) (*net.UDPAddr, error) {
 	switch addr.data[0] {
 	case AddrTypeIPv4:
@@ -188,7 +171,6 @@ func ResolveUDPAddr(addr *Addr) (*net.UDPAddr, error) {
 	}
 }
 
-// ResolveAddr is ...
 func ResolveAddr(addr net.Addr) (*Addr, error) {
 	if a, ok := addr.(*Addr); ok {
 		return a, nil
@@ -196,7 +178,6 @@ func ResolveAddr(addr net.Addr) (*Addr, error) {
 	return ResolveAddrBuffer(addr, make([]byte, MaxAddrLen))
 }
 
-// ResolveAddrBuffer is ...
 func ResolveAddrBuffer(addr net.Addr, b []byte) (*Addr, error) {
 	if nAddr, ok := addr.(*net.TCPAddr); ok {
 		if ipv4 := nAddr.IP.To4(); ipv4 != nil {

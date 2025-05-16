@@ -18,6 +18,7 @@ import (
 
 	"github.com/imgk/caddy-trojan/pkgs/domaintree"
 	"github.com/imgk/caddy-trojan/pkgs/trojan"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 )
 
 func init() {
@@ -39,7 +40,7 @@ func init() {
 	RegisterProxyParser("no_proxy", fn)
 
 	fn = func(args []string) (json.RawMessage, error) {
-		return caddyconfig.JSONModuleObject(new(EnvProxy), "proxy", "env", nil), nil
+		return x.RemoveNullKeysFromJSON(caddyconfig.JSONModuleObject(new(EnvProxy), "proxy", "env", nil))
 	}
 	RegisterProxyParser("env", fn)
 	RegisterProxyParser("env_proxy", fn)
@@ -57,7 +58,8 @@ func init() {
 			socks.User = args[1]
 			socks.Password = args[2]
 		}
-		return caddyconfig.JSONModuleObject(socks, "proxy", "socks", nil), nil
+
+		return x.RemoveNullKeysFromJSON(caddyconfig.JSONModuleObject(socks, "proxy", "socks", nil))
 	}
 	RegisterProxyParser("socks", fn)
 	RegisterProxyParser("socks_proxy", fn)
@@ -75,7 +77,8 @@ func init() {
 			http.User = args[1]
 			http.Password = args[2]
 		}
-		return caddyconfig.JSONModuleObject(http, "proxy", "http", nil), nil
+
+		return x.RemoveNullKeysFromJSON(caddyconfig.JSONModuleObject(http, "proxy", "http", nil))
 	}
 	RegisterProxyParser("http", fn)
 	RegisterProxyParser("http_proxy", fn)
@@ -85,7 +88,6 @@ func init() {
 	}
 	RegisterProxyParser("drop", fn)
 	RegisterProxyParser("drop_proxy", fn)
-
 }
 
 type Proxy interface {
@@ -126,6 +128,9 @@ func (noProxy) CaddyModule() caddy.ModuleInfo {
 }
 
 type EnvProxy struct {
+	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+
+	proxy  Proxy
 	dialer proxy.Dialer
 }
 
@@ -137,6 +142,15 @@ func (EnvProxy) CaddyModule() caddy.ModuleInfo {
 }
 
 func (p *EnvProxy) Provision(ctx caddy.Context) error {
+	if p.ProxyRaw != nil {
+		mod, err := ctx.LoadModule(p, "ProxyRaw")
+		if err != nil {
+			return nil
+		}
+		p.proxy = mod.(Proxy)
+		p.dialer = proxy.FromEnvironmentUsing(p.proxy)
+		return nil
+	}
 	p.dialer = proxy.FromEnvironment()
 	return nil
 }
@@ -167,10 +181,13 @@ func (envProxy) CaddyModule() caddy.ModuleInfo {
 // SocksProxy is a caddy module and supports socks5 proxy server.
 // All tcp connections will be sent to proxy server.
 type SocksProxy struct {
+	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+
 	Server   string `json:"server"`
 	User     string `json:"user,omitempty"`
 	Password string `json:"password,omitempty"`
 
+	proxy  Proxy
 	dialer proxy.Dialer
 }
 
@@ -189,11 +206,19 @@ func (p *SocksProxy) Provision(ctx caddy.Context) error {
 		return errors.New("empty password")
 	}
 
+	if p.ProxyRaw != nil {
+		mod, err := ctx.LoadModule(p, "ProxyRaw")
+		if err != nil {
+			return nil
+		}
+		p.proxy = mod.(Proxy)
+	}
+
 	var err error
 	if p.User == "" && p.Password == "" {
-		p.dialer, err = proxy.SOCKS5("socks5", p.Server, nil, nil)
+		p.dialer, err = proxy.SOCKS5("socks5", p.Server, nil, p.proxy)
 	} else {
-		p.dialer, err = proxy.SOCKS5("socks5", p.Server, &proxy.Auth{User: p.User, Password: p.Password}, nil)
+		p.dialer, err = proxy.SOCKS5("socks5", p.Server, &proxy.Auth{User: p.User, Password: p.Password}, p.proxy)
 	}
 	if err != nil {
 		return err
@@ -217,10 +242,13 @@ func (p *SocksProxy) ListenPacket(network, addr string) (net.PacketConn, error) 
 // HttpProxy is a caddy module and supports socks5 proxy server.
 // All tcp connections will be sent to proxy server.
 type HttpProxy struct {
+	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+
 	Server   string `json:"server"`
 	User     string `json:"user,omitempty"`
 	Password string `json:"password,omitempty"`
 
+	proxy     Proxy
 	basicAuth string
 	tcpURL    string
 }
@@ -240,6 +268,16 @@ func (p *HttpProxy) Provision(ctx caddy.Context) error {
 		return errors.New("empty password")
 	}
 
+	if p.ProxyRaw != nil {
+		mod, err := ctx.LoadModule(p, "ProxyRaw")
+		if err != nil {
+			return nil
+		}
+		p.proxy = mod.(Proxy)
+	} else {
+		p.proxy = &NoProxy{}
+	}
+
 	if p.User != "" && p.Password != "" {
 		p.basicAuth = "basic " + base64.StdEncoding.EncodeToString([]byte(p.User+":"+p.Password))
 	}
@@ -253,7 +291,7 @@ func (p *HttpProxy) Close() error {
 }
 
 func (p *HttpProxy) Dial(network, addr string) (net.Conn, error) {
-	conn, err := net.Dial("tcp", p.Server)
+	conn, err := p.proxy.Dial("tcp", p.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -308,8 +346,9 @@ func (*DropProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 }
 
 type BlockDomain struct {
-	ProxyRaw   json.RawMessage `json:"proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
-	DomainList []string        `json:"domain_list,omitempty"`
+	ProxyRaw json.RawMessage `json:"proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
+
+	DomainList []string `json:"domain_list,omitempty"`
 
 	sync.RWMutex
 	proxy Proxy

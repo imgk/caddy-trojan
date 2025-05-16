@@ -20,6 +20,11 @@ func init() {
 	caddy.RegisterModule((*MemoryUpstream)(nil))
 }
 
+type Traffic struct {
+	Up   int64 `json:"up"`
+	Down int64 `json:"down"`
+}
+
 type Upstream interface {
 	Add(string) error
 	Delete(string) error

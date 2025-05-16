@@ -15,9 +15,7 @@ func init() {
 	caddy.RegisterModule(Admin{})
 }
 
-// Admin is ...
 type Admin struct {
-	// Upstream is ...
 	upstream app.Upstream
 }
 
@@ -29,7 +27,6 @@ func (Admin) CaddyModule() caddy.ModuleInfo {
 	}
 }
 
-// Provision is ...
 func (al *Admin) Provision(ctx caddy.Context) error {
 	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
 		if errors.Is(err, caddy.ErrNotConfigured) {
@@ -64,7 +61,6 @@ func (al *Admin) Routes() []caddy.AdminRoute {
 	}
 }
 
-// GetUsers is ...
 func (al *Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 	if al.upstream == nil {
 		return nil
@@ -90,7 +86,6 @@ func (al *Admin) GetUsers(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// AddUser is ...
 func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 	if al.upstream == nil {
 		return nil
@@ -120,7 +115,6 @@ func (al *Admin) AddUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// DeleteUser is ...
 func (al *Admin) DeleteUser(w http.ResponseWriter, r *http.Request) error {
 	if al.upstream == nil {
 		return nil

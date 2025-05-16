@@ -1,9 +1,0 @@
-package app
-
-// Traffic is ...
-type Traffic struct {
-	// Up is ...
-	Up int64 `json:"up"`
-	// Down is ...
-	Down int64 `json:"down"`
-}

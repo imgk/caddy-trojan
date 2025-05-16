@@ -179,13 +179,11 @@ var (
 	_ caddyfile.Unmarshaler       = (*Handler)(nil)
 )
 
-// FlushWriter is ...
 type FlushWriter struct {
 	Writer  io.Writer
 	Flusher http.Flusher
 }
 
-// NewFlushWriter is ...
 func NewFlushWriter(w http.ResponseWriter) *FlushWriter {
 	return &FlushWriter{
 		Writer:  w,
@@ -193,7 +191,6 @@ func NewFlushWriter(w http.ResponseWriter) *FlushWriter {
 	}
 }
 
-// Write is ...
 func (c *FlushWriter) Write(b []byte) (int, error) {
 	n, err := c.Writer.Write(b)
 	c.Flusher.Flush()

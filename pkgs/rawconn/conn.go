@@ -33,13 +33,11 @@ func RewindConn(conn net.Conn, read []byte) net.Conn {
 	}
 }
 
-// conn is ...
 type conn struct {
 	net.Conn
 	Reader bytes.Reader
 }
 
-// NewRawConn is ...
 func NewConn(nc net.Conn, buf []byte) net.Conn {
 	c := &conn{
 		Conn: nc,
@@ -48,7 +46,6 @@ func NewConn(nc net.Conn, buf []byte) net.Conn {
 	return c
 }
 
-// Read is ...
 func (c *conn) Read(b []byte) (int, error) {
 	if c.Reader.Size() == 0 {
 		return c.Conn.Read(b)
@@ -61,7 +58,6 @@ func (c *conn) Read(b []byte) (int, error) {
 	return n, err
 }
 
-// CloseWrite is ...
 func (c *conn) CloseWrite() error {
 	if cc, ok := c.Conn.(*net.TCPConn); ok {
 		return cc.CloseWrite()

@@ -41,8 +41,6 @@ func copyBuffer(w io.Writer, r io.Reader, buf []byte) (n int64, err error) {
 	return n, err
 }
 
-// HandleTCP is ...
-// trojan TCP stream
 func HandleTCP(r io.Reader, w io.Writer, addr net.Addr, d Dialer) (int64, int64, error) {
 	rc, err := d.Dial("tcp", addr.String())
 	if err != nil {
