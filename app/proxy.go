@@ -217,9 +217,9 @@ func (p *SocksProxy) Provision(ctx caddy.Context) error {
 
 	var err error
 	if p.User == "" && p.Password == "" {
-		p.dialer, err = proxy.SOCKS5("socks5", p.Server, nil, p.proxy)
+		p.dialer, err = proxy.SOCKS5("tcp", p.Server, nil, p.proxy)
 	} else {
-		p.dialer, err = proxy.SOCKS5("socks5", p.Server, &proxy.Auth{User: p.User, Password: p.Password}, p.proxy)
+		p.dialer, err = proxy.SOCKS5("tcp", p.Server, &proxy.Auth{User: p.User, Password: p.Password}, p.proxy)
 	}
 	if err != nil {
 		return err
