@@ -128,7 +128,7 @@ func (noProxy) CaddyModule() caddy.ModuleInfo {
 }
 
 type EnvProxy struct {
-	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+	ProxyRaw json.RawMessage `json:"pre_proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
 
 	proxy  Proxy
 	dialer proxy.Dialer
@@ -181,7 +181,7 @@ func (envProxy) CaddyModule() caddy.ModuleInfo {
 // SocksProxy is a caddy module and supports socks5 proxy server.
 // All tcp connections will be sent to proxy server.
 type SocksProxy struct {
-	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+	ProxyRaw json.RawMessage `json:"pre_proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
 
 	Server   string `json:"server"`
 	User     string `json:"user,omitempty"`
@@ -201,8 +201,7 @@ func (SocksProxy) CaddyModule() caddy.ModuleInfo {
 func (p *SocksProxy) Provision(ctx caddy.Context) error {
 	if p.User == "" && p.Password != "" {
 		return errors.New("empty user")
-	}
-	if p.User != "" && p.Password == "" {
+	} else if p.User != "" && p.Password == "" {
 		return errors.New("empty password")
 	}
 
@@ -212,6 +211,8 @@ func (p *SocksProxy) Provision(ctx caddy.Context) error {
 			return nil
 		}
 		p.proxy = mod.(Proxy)
+	} else {
+		p.proxy = &NoProxy{}
 	}
 
 	var err error
@@ -242,7 +243,7 @@ func (p *SocksProxy) ListenPacket(network, addr string) (net.PacketConn, error) 
 // HttpProxy is a caddy module and supports socks5 proxy server.
 // All tcp connections will be sent to proxy server.
 type HttpProxy struct {
-	ProxyRaw json.RawMessage `json:"proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
+	ProxyRaw json.RawMessage `json:"pre_proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
 
 	Server   string `json:"server"`
 	User     string `json:"user,omitempty"`
@@ -263,8 +264,7 @@ func (HttpProxy) CaddyModule() caddy.ModuleInfo {
 func (p *HttpProxy) Provision(ctx caddy.Context) error {
 	if p.User == "" && p.Password != "" {
 		return errors.New("empty user")
-	}
-	if p.User != "" && p.Password == "" {
+	} else if p.User != "" && p.Password == "" {
 		return errors.New("empty password")
 	}
 
@@ -346,7 +346,7 @@ func (*DropProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 }
 
 type BlockDomain struct {
-	ProxyRaw json.RawMessage `json:"proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
+	ProxyRaw json.RawMessage `json:"pre_proxy,omitempty" caddy:"namespace=trojan.proxy inline_key=proxy"`
 
 	DomainList []string `json:"domain_list,omitempty"`
 
