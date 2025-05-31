@@ -88,6 +88,9 @@ func (app *App) Start() error {
 }
 
 func (app *App) Stop() error {
+	for _, proxy := range app.namedProxy {
+		proxy.Close()
+	}
 	return app.proxy.Close()
 }
 

@@ -150,13 +150,15 @@ func (p *EnvProxy) Provision(ctx caddy.Context) error {
 		p.proxy = mod.(Proxy)
 		p.dialer = proxy.FromEnvironmentUsing(p.proxy)
 		return nil
+	} else {
+		p.proxy = &NoProxy{}
 	}
 	p.dialer = proxy.FromEnvironment()
 	return nil
 }
 
-func (*EnvProxy) Close() error {
-	return nil
+func (p *EnvProxy) Close() error {
+	return p.proxy.Close()
 }
 
 func (p *EnvProxy) Dial(network, addr string) (net.Conn, error) {
@@ -229,7 +231,7 @@ func (p *SocksProxy) Provision(ctx caddy.Context) error {
 }
 
 func (p *SocksProxy) Close() error {
-	return nil
+	return p.proxy.Close()
 }
 
 func (p *SocksProxy) Dial(network, addr string) (net.Conn, error) {
@@ -287,7 +289,7 @@ func (p *HttpProxy) Provision(ctx caddy.Context) error {
 }
 
 func (p *HttpProxy) Close() error {
-	return nil
+	return p.proxy.Close()
 }
 
 func (p *HttpProxy) Dial(network, addr string) (net.Conn, error) {
@@ -381,7 +383,7 @@ func (p *BlockDomain) Provision(ctx caddy.Context) error {
 }
 
 func (p *BlockDomain) Close() error {
-	return nil
+	return p.proxy.Close()
 }
 
 func (d *BlockDomain) Dial(network, addr string) (net.Conn, error) {
