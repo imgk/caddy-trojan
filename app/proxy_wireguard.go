@@ -6,6 +6,7 @@ import (
 	"net/netip"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/imgk/caddy-trojan/pkgs/trojan"
 
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
@@ -86,3 +87,9 @@ func (p *WireGuardProxy) ListenPacket(network, addr string) (net.PacketConn, err
 	}
 	return p.tnet.ListenUDPAddrPort(naddr)
 }
+
+var (
+	_ Proxy             = (*WireGuardProxy)(nil)
+	_ trojan.Dialer     = (*WireGuardProxy)(nil)
+	_ caddy.Provisioner = (*WireGuardProxy)(nil)
+)
