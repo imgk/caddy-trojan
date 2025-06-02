@@ -26,7 +26,7 @@ type ShadowsocksProxy struct {
 
 func (ShadowsocksProxy) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "trojan.proxy.Shadowsocks",
+		ID:  "trojan.proxy.shadowsocks",
 		New: func() caddy.Module { return new(ShadowsocksProxy) },
 	}
 }
