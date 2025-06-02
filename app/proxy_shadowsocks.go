@@ -53,7 +53,7 @@ func (p *ShadowsocksProxy) Provision(ctx caddy.Context) error {
 }
 
 func (p *ShadowsocksProxy) Close() error {
-	return nil
+	return p.proxy.Close()
 }
 
 func (p *ShadowsocksProxy) Dial(network, addr string) (net.Conn, error) {
@@ -87,13 +87,53 @@ func (p *ShadowsocksProxy) Dial(network, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
+type PacketConn struct {
+	net.PacketConn
+
+	addr net.Addr
+}
+
+func (c *PacketConn) WriteTo(buf []byte, addr net.Addr) (int, error) {
+	srcAddr := socks.ParseAddr(addr.String())
+	buf = append(buf, srcAddr...)
+
+	n, err := c.PacketConn.WriteTo(buf, c.addr)
+	return n - len(srcAddr), err
+}
+
+func (c *PacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
+	n, _, err := c.PacketConn.ReadFrom(b)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	tgt := socks.SplitAddr(b[:n])
+	if tgt == nil {
+		return 0, nil, fmt.Errorf("split address error: %w", err)
+	}
+
+	tgtUDP, err := net.ResolveUDPAddr("udp", tgt.String())
+	if err != nil {
+		return 0, nil, fmt.Errorf("resolve address error: %w", err)
+	}
+
+	copy(b, b[len(tgt):n])
+
+	return n - len(tgt), tgtUDP, nil
+}
+
 func (p *ShadowsocksProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
 	pc, err := p.proxy.ListenPacket(network, addr)
 	if err != nil {
 		return nil, err
 	}
 
-	return p.cipher.PacketConn(pc), nil
+	tgt, err := net.ResolveUDPAddr("udp", p.Server)
+	if err != nil {
+		return nil, fmt.Errorf("resolve address error: %w", err)
+	}
+
+	return &PacketConn{p.cipher.PacketConn(pc), tgt}, nil
 }
 
 var (
