@@ -95,7 +95,7 @@ type PacketConn struct {
 
 func (c *PacketConn) WriteTo(buf []byte, addr net.Addr) (int, error) {
 	srcAddr := socks.ParseAddr(addr.String())
-	buf = append(buf, srcAddr...)
+	buf = append(srcAddr, buf...)
 
 	n, err := c.PacketConn.WriteTo(buf, c.addr)
 	return n - len(srcAddr), err
