@@ -238,8 +238,26 @@ func (p *SocksProxy) Dial(network, addr string) (net.Conn, error) {
 	return p.dialer.Dial(network, addr)
 }
 
+type socksPacketConn struct {
+	net.PacketConn
+	conn net.Conn
+}
+
+func (c *socksPacketConn) WriteTo(b []byte, addr net.Addr) (int, error) {
+	return 0, nil
+}
+
+func (c *socksPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
+	return 0, nil, nil
+}
+
+func (c *socksPacketConn) Close() error {
+	c.conn.Close()
+	return c.PacketConn.Close()
+}
+
 func (p *SocksProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
-	return nil, errors.New("socks5 UDP Associate not supported")
+	return &socksPacketConn{}, errors.New("socks5 UDP Associate not supported")
 }
 
 // HttpProxy is a caddy module and supports socks5 proxy server.
@@ -322,8 +340,20 @@ func (p *HttpProxy) Dial(network, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
+type httpPacketConn struct {
+	net.Conn
+}
+
+func (c *httpPacketConn) WriteTo(b []byte, addr net.Addr) (int, error) {
+	return 0, nil
+}
+
+func (c *httpPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
+	return 0, nil, nil
+}
+
 func (p *HttpProxy) ListenPacket(network, addr string) (net.PacketConn, error) {
-	return nil, errors.New("does not support UDP for http proxy")
+	return &httpPacketConn{}, errors.New("does not support UDP for http proxy")
 }
 
 type DropProxy struct{}

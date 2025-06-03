@@ -7,11 +7,30 @@ import (
 	"net"
 
 	"github.com/caddyserver/caddy/v2"
+	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/imgk/caddy-trojan/pkgs/trojan"
+	"github.com/imgk/caddy-trojan/pkgs/x"
 
 	"github.com/shadowsocks/go-shadowsocks2/core"
 	"github.com/shadowsocks/go-shadowsocks2/socks"
 )
+
+func init() {
+	caddy.RegisterModule(ShadowsocksProxy{})
+
+	fn := ProxyParser(nil)
+
+	fn = func(args []string) (json.RawMessage, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("not enough shadowsocks config")
+		}
+		proxy := new(ShadowsocksProxy)
+		proxy.Server, proxy.Password, proxy.Method = args[0], args[1], args[2]
+		return x.RemoveNullKeysFromJSON(caddyconfig.JSONModuleObject(proxy, "proxy", "shadowsocks", nil))
+	}
+	RegisterProxyParser("shadowsocks", fn)
+	RegisterProxyParser("shadowsocks_proxy", fn)
+}
 
 type ShadowsocksProxy struct {
 	ProxyRaw json.RawMessage `json:"pre_proxy" caddy:"namespace=trojan.proxy inline_key=proxy"`
@@ -87,13 +106,13 @@ func (p *ShadowsocksProxy) Dial(network, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
-type PacketConn struct {
+type ssPacketConn struct {
 	net.PacketConn
 
 	addr net.Addr
 }
 
-func (c *PacketConn) WriteTo(buf []byte, addr net.Addr) (int, error) {
+func (c *ssPacketConn) WriteTo(buf []byte, addr net.Addr) (int, error) {
 	srcAddr := socks.ParseAddr(addr.String())
 	buf = append(srcAddr, buf...)
 
@@ -101,7 +120,7 @@ func (c *PacketConn) WriteTo(buf []byte, addr net.Addr) (int, error) {
 	return n - len(srcAddr), err
 }
 
-func (c *PacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
+func (c *ssPacketConn) ReadFrom(b []byte) (int, net.Addr, error) {
 	n, _, err := c.PacketConn.ReadFrom(b)
 	if err != nil {
 		return 0, nil, err
@@ -133,7 +152,7 @@ func (p *ShadowsocksProxy) ListenPacket(network, addr string) (net.PacketConn, e
 		return nil, fmt.Errorf("resolve address error: %w", err)
 	}
 
-	return &PacketConn{p.cipher.PacketConn(pc), tgt}, nil
+	return &ssPacketConn{p.cipher.PacketConn(pc), tgt}, nil
 }
 
 var (

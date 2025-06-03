@@ -13,6 +13,10 @@ import (
 	"golang.zx2c4.com/wireguard/tun/netstack"
 )
 
+func init() {
+	caddy.RegisterModule(WireGuardProxy{})
+}
+
 type WireGuardProxy struct {
 	Address    string `json:"address"`
 	DNSServer  string `json:"dns_server"`
