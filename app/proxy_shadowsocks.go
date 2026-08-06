@@ -87,7 +87,9 @@ func (p *ShadowsocksProxy) Dial(network, addr string) (net.Conn, error) {
 
 	c, err := p.proxy.Dial("tcp", p.Server)
 	if err != nil {
-		c.Close()
+		if c != nil {
+			_ = c.Close()
+		}
 		return nil, err
 	}
 	conn := p.cipher.StreamConn(c)
