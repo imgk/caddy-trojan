@@ -105,7 +105,24 @@ func (m *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 
 	// handle websocket
 	if m.WebSocket && websocket.IsWebSocketUpgrade(r) {
-		conn, err := m.upgrader.Upgrade(w, r, nil)
+		// websocket.Upgrader uses http.Hijacker
+		ww := http.ResponseWriter(w)
+		for {
+			if _, ok := ww.(http.Hijacker); ok {
+				break
+			}
+
+			if rww, ok := ww.(interface{ Unwrap() http.ResponseWriter }); ok {
+				ww = rww.Unwrap()
+				continue
+			}
+
+			return fmt.Errorf("type %T does not support Unwrap() http.ResponseWriter or http.Hijacker", ww)
+		}
+		if _, ok := ww.(http.Hijacker); !ok {
+			return fmt.Errorf("type %T does not support http.Hijacker", ww)
+		}
+		conn, err := m.upgrader.Upgrade(ww, r, nil)
 		if err != nil {
 			return err
 		}
